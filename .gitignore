@@ -10,12 +10,17 @@ venv/
 
 # Environment & secrets
 .env
-.env.*
+!.env.example
 credentials.json
 
-# Model artefacts & raw data
-artefacts/
-data/raw/
+# Model artefacts & raw data (keep .gitkeep)
+artefacts/*
+!artefacts/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+
+# uv
+uv.lock
 
 # Node.js
 node_modules/
@@ -39,5 +44,10 @@ htmlcov/
 .pytest_cache/
 coverage/
 
-# Outputs (optional — remove if you want to track reports)
-outputs/
+# Outputs (keep .gitkeep)
+outputs/*
+!outputs/.gitkeep
+
+# Model binaries
+*.pkl
+*.joblib
