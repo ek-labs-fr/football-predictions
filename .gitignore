@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# Environment & secrets
+.env
+.env.*
+credentials.json
+
+# Model artefacts & raw data
+artefacts/
+data/raw/
+
+# Node.js
+node_modules/
+
+# Angular
+src/ui/client/.angular/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage & test output
+htmlcov/
+.coverage
+.pytest_cache/
+coverage/
+
+# Outputs (optional — remove if you want to track reports)
+outputs/
