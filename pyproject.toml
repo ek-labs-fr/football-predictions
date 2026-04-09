@@ -68,6 +68,8 @@ select = [
 # ML code conventionally uses uppercase X for feature matrices
 "src/models/**" = ["N803", "N806"]
 "src/features/**" = ["N803", "N806"]
+# FastAPI uses Depends() in argument defaults by convention
+"src/api/**" = ["B008", "N803", "N806"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]

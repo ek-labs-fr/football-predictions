@@ -280,20 +280,23 @@ def simulate_tournament(
                 stage_counts[winner][stage_name] += 1
             return winners
 
-        qf_teams = _run_round(r16_teams, "qf")
-        sf_matchups = [(qf_teams[i], qf_teams[i + 1]) for i in range(0, len(qf_teams), 2)]
-        sf_teams = _run_round(sf_matchups, "sf")
-        final_matchups = [(sf_teams[i], sf_teams[i + 1]) for i in range(0, len(sf_teams), 2)]
-        final_teams = _run_round(final_matchups, "final")
+        def _pair_up(teams: list[int]) -> list[tuple[int, int]]:
+            return [(teams[i], teams[i + 1]) for i in range(0, len(teams) - 1, 2)]
 
-        if final_teams:
-            # Final
-            if len(final_teams) >= 2:
-                lh, la = get_lambdas(final_teams[0], final_teams[1])
-                hg, ag, _ = simulate_knockout_match(lh, la, rho, rng)
-                champion = final_teams[0] if hg > ag else final_teams[1]
-            else:
-                champion = final_teams[0]
+        # Run knockout rounds until we have a champion
+        current = r16_teams
+        stage_names = ["qf", "sf", "final"]
+        winners = []
+        for stage_name in stage_names:
+            if not current:
+                break
+            winners = _run_round(current, stage_name)
+            if len(winners) <= 1:
+                break
+            current = _pair_up(winners)
+
+        if winners:
+            champion = winners[0]
             stage_counts[champion]["champion"] += 1
 
     rows = []
