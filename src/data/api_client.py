@@ -238,7 +238,8 @@ class APIFootballClient:
         return f"{name}_{h}"
 
     def _cache_path(self, endpoint: str, params: dict[str, Any]) -> Path:
-        return self.cache_dir / f"{self._cache_key(endpoint, params)}.json"
+        subdir = endpoint.strip("/").replace("/", "_")
+        return self.cache_dir / subdir / f"{self._cache_key(endpoint, params)}.json"
 
     @staticmethod
     def _read_cache(path: Path) -> dict[str, Any] | None:
