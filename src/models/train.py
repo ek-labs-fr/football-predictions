@@ -55,6 +55,24 @@ _NON_FEATURE_COLS = {
     "h2h_last_winner",
 }
 
+# Features with zero or near-zero SHAP importance (< 0.002) — excluded to reduce noise
+_DROP_FEATURES = {
+    "home_top5_league_ratio",
+    "away_top5_league_ratio",
+    "top5_ratio_diff",
+    "h2h_home_wins",
+    "h2h_home_win_rate",
+    "h2h_away_wins",
+    "h2h_matches_total",
+    "h2h_away_goals_avg",
+    "home_tournament_yellows_so_far",
+    "away_tournament_yellows_so_far",
+    "home_tournament_reds_so_far",
+    "away_tournament_reds_so_far",
+    "away_matches_played_in_tournament",
+    "home_matches_available",
+}
+
 # Maximum goals to consider in scoreline matrix
 _MAX_GOALS = 10
 
@@ -103,9 +121,10 @@ class TrainedModel:
 
 
 def get_feature_columns(df: pd.DataFrame) -> list[str]:
-    """Identify numeric feature columns (exclude labels, IDs, strings)."""
+    """Identify numeric feature columns (exclude labels, IDs, strings, and low-importance features)."""
     numeric = df.select_dtypes(include="number").columns.tolist()
-    return [c for c in numeric if c not in _NON_FEATURE_COLS]
+    excluded = _NON_FEATURE_COLS | _DROP_FEATURES
+    return [c for c in numeric if c not in excluded]
 
 
 def create_split(
