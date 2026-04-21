@@ -56,7 +56,7 @@ _NON_FEATURE_COLS = {
 }
 
 # Features with zero or near-zero SHAP importance (< 0.002) — excluded to reduce noise
-_DROP_FEATURES = {
+_NATIONAL_DROP_FEATURES = {
     "home_top5_league_ratio",
     "away_top5_league_ratio",
     "top5_ratio_diff",
@@ -71,6 +71,14 @@ _DROP_FEATURES = {
     "away_tournament_reds_so_far",
     "away_matches_played_in_tournament",
     "home_matches_available",
+}
+
+# Club-mode low-importance features — start empty, revisit after SHAP
+_CLUB_DROP_FEATURES: set[str] = set()
+
+_DROP_FEATURES_BY_MODE = {
+    "national": _NATIONAL_DROP_FEATURES,
+    "club": _CLUB_DROP_FEATURES,
 }
 
 # Maximum goals to consider in scoreline matrix
@@ -120,33 +128,60 @@ class TrainedModel:
 # ------------------------------------------------------------------
 
 
-def get_feature_columns(df: pd.DataFrame) -> list[str]:
+def get_feature_columns(df: pd.DataFrame, mode: str = "national") -> list[str]:
     """Identify numeric feature columns (exclude labels, IDs, strings, and low-importance features)."""
     numeric = df.select_dtypes(include="number").columns.tolist()
-    excluded = _NON_FEATURE_COLS | _DROP_FEATURES
+    drop = _DROP_FEATURES_BY_MODE.get(mode, set())
+    excluded = _NON_FEATURE_COLS | drop
     return [c for c in numeric if c not in excluded]
+
+
+def _make_holdout_masks(
+    df: pd.DataFrame, mode: str
+) -> tuple[pd.Series, pd.Series]:
+    """Return (train_mask, test_mask) for the given mode."""
+    if mode == "national":
+        test_mask = (df["league_id"] == WC_2022_LEAGUE_ID) & (df["season"] == WC_2022_SEASON)
+        train_mask = df["date"] < WC_2022_START
+        return train_mask, test_mask
+
+    if mode == "club":
+        # Holdout: the most recent fully completed season (season 2024 →
+        # matches played 2024-08 to 2025-05). Season 2025 is in-progress and
+        # excluded — we want a complete holdout distribution.
+        completed_seasons = (
+            df.groupby("season")["date"]
+            .max()
+            .pipe(lambda s: s[s < df["date"].max() - pd.Timedelta(days=30)])
+        )
+        holdout_season = int(completed_seasons.index.max())
+        test_mask = df["season"] == holdout_season
+        train_mask = df["season"] < holdout_season
+        return train_mask, test_mask
+
+    raise ValueError(f"Unknown mode: {mode!r}")
 
 
 def create_split(
     training_table_path: str | Path = PROCESSED_DIR / "training_table.csv",
     n_cv_splits: int = 5,
+    mode: str = "national",
 ) -> SplitData:
-    """Create time-based train/test split with WC 2022 as holdout.
+    """Create time-based train/test split.
 
-    Returns a SplitData container with features, labels, weights, and CV splitter.
+    mode="national" holds out the WC 2022 tournament.
+    mode="club" holds out the most recently completed domestic season.
     """
     df = pd.read_csv(training_table_path)
     df["date"] = pd.to_datetime(df["date"], utc=True)
     df = df.sort_values("date").reset_index(drop=True)
 
-    # Holdout: WC 2022 matches
-    test_mask = (df["league_id"] == WC_2022_LEAGUE_ID) & (df["season"] == WC_2022_SEASON)
-    train_mask = df["date"] < WC_2022_START
+    train_mask, test_mask = _make_holdout_masks(df, mode)
 
     train_df = df[train_mask].copy()
     test_df = df[test_mask].copy()
 
-    feature_cols = get_feature_columns(df)
+    feature_cols = get_feature_columns(df, mode=mode)
 
     # Encode outcome labels
     le = LabelEncoder()
@@ -171,10 +206,11 @@ def create_split(
     cv = TimeSeriesSplit(n_splits=n_cv_splits)
 
     logger.info(
-        "Split: train=%d (up to %s), test=%d (WC 2022)",
+        "Split: train=%d (up to %s), test=%d (holdout: %s mode)",
         len(train_df),
         train_df["date"].max(),
         len(test_df),
+        mode,
     )
     logger.info("Features: %d columns", len(feature_cols))
     logger.info("Outcome distribution (train):\n%s", train_df["outcome"].value_counts().to_string())

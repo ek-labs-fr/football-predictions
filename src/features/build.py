@@ -317,3 +317,148 @@ def build_training_table(
         logger.info("Columns with missing values:\n%s", cols_with_missing.to_string())
 
     return df
+
+
+# ------------------------------------------------------------------
+# Club training table
+# ------------------------------------------------------------------
+
+
+def _add_rest_days(fixtures: pd.DataFrame) -> pd.DataFrame:
+    """Add home_rest_days / away_rest_days columns from prior fixtures per team."""
+    df = fixtures.copy()
+    df["date"] = pd.to_datetime(df["date"], utc=True)
+    df = df.sort_values("date").reset_index(drop=True)
+
+    # One row per (team, match) with that team's date
+    home = df[["fixture_id", "date", "home_team_id"]].rename(
+        columns={"home_team_id": "team_id"}
+    )
+    away = df[["fixture_id", "date", "away_team_id"]].rename(
+        columns={"away_team_id": "team_id"}
+    )
+    long = pd.concat([home, away], ignore_index=True).sort_values(["team_id", "date"])
+    long["prev_date"] = long.groupby("team_id")["date"].shift(1)
+    long["rest_days"] = (long["date"] - long["prev_date"]).dt.total_seconds() / 86400.0
+
+    home_rest = long.rename(columns={"team_id": "home_team_id", "rest_days": "home_rest_days"})[
+        ["fixture_id", "home_team_id", "home_rest_days"]
+    ]
+    away_rest = long.rename(columns={"team_id": "away_team_id", "rest_days": "away_rest_days"})[
+        ["fixture_id", "away_team_id", "away_rest_days"]
+    ]
+    df = df.merge(home_rest, on=["fixture_id", "home_team_id"], how="left")
+    df = df.merge(away_rest, on=["fixture_id", "away_team_id"], how="left")
+    return df
+
+
+def build_club_training_table(
+    fixtures_path: str | Path = PROCESSED_DIR / "all_fixtures_club.csv",
+    rolling_path: str | Path = PROCESSED_DIR / "features_rolling_club.csv",
+    squad_path: str | Path = PROCESSED_DIR / "features_squad_club.csv",
+    h2h_path: str | Path = PROCESSED_DIR / "features_h2h_club.csv",
+    output_path: str | Path = PROCESSED_DIR / "training_table_club.csv",
+) -> pd.DataFrame:
+    """Join club features into a single training table.
+
+    Club pipeline differs from national: no FIFA rankings, no Elo, no tournament
+    stage features, and home advantage is real (not a neutral venue).
+    """
+    df = pd.read_csv(fixtures_path)
+    df["date"] = pd.to_datetime(df["date"], utc=True)
+    df = df.sort_values("date").reset_index(drop=True)
+    logger.info("Club backbone: %d fixtures", len(df))
+
+    # Rest days
+    df = _add_rest_days(df)
+
+    # Match weight: all league matches equal
+    df["match_weight"] = 1.0
+    df["neutral_venue"] = False
+    df["is_knockout"] = False
+
+    # Rolling features
+    rolling_path = Path(rolling_path)
+    if rolling_path.exists():
+        rolling = pd.read_csv(rolling_path)
+        home_rolling = rolling.rename(
+            columns={c: f"home_{c}" for c in rolling.columns if c not in ("fixture_id", "team_id")}
+        )
+        away_rolling = rolling.rename(
+            columns={c: f"away_{c}" for c in rolling.columns if c not in ("fixture_id", "team_id")}
+        )
+        df = df.merge(
+            home_rolling,
+            left_on=["fixture_id", "home_team_id"],
+            right_on=["fixture_id", "team_id"],
+            how="left",
+        ).drop(columns=["team_id"], errors="ignore")
+        df = df.merge(
+            away_rolling,
+            left_on=["fixture_id", "away_team_id"],
+            right_on=["fixture_id", "team_id"],
+            how="left",
+        ).drop(columns=["team_id"], errors="ignore")
+    else:
+        logger.warning("Club rolling features not found at %s", rolling_path)
+
+    # Squad features keyed by (team_id, season)
+    squad_path = Path(squad_path)
+    if squad_path.exists():
+        squad = pd.read_csv(squad_path)
+        home_squad = squad.rename(
+            columns={c: f"home_{c}" for c in squad.columns if c not in ("team_id", "season")}
+        )
+        away_squad = squad.rename(
+            columns={c: f"away_{c}" for c in squad.columns if c not in ("team_id", "season")}
+        )
+        df = df.merge(
+            home_squad,
+            left_on=["home_team_id", "season"],
+            right_on=["team_id", "season"],
+            how="left",
+        ).drop(columns=["team_id"], errors="ignore")
+        df = df.merge(
+            away_squad,
+            left_on=["away_team_id", "season"],
+            right_on=["team_id", "season"],
+            how="left",
+        ).drop(columns=["team_id"], errors="ignore")
+    else:
+        logger.warning("Club squad features not found at %s", squad_path)
+
+    # H2H features
+    h2h_path = Path(h2h_path)
+    if h2h_path.exists():
+        h2h = pd.read_csv(h2h_path)
+        df = df.merge(h2h, on="fixture_id", how="left")
+    else:
+        logger.warning("Club H2H features not found at %s", h2h_path)
+
+    # Differential features
+    if "home_points_per_game_l10" in df.columns:
+        df["form_diff"] = df["home_points_per_game_l10"] - df["away_points_per_game_l10"]
+    if "home_goals_scored_avg_l10" in df.columns:
+        df["goals_scored_avg_diff"] = (
+            df["home_goals_scored_avg_l10"] - df["away_goals_scored_avg_l10"]
+        )
+    if "home_squad_avg_rating" in df.columns:
+        df["squad_rating_diff"] = df["home_squad_avg_rating"] - df["away_squad_avg_rating"]
+    if "home_rest_days" in df.columns:
+        df["rest_days_diff"] = df["home_rest_days"] - df["away_rest_days"]
+
+    # Labels
+    df["goal_diff"] = df["home_goals"] - df["away_goals"]
+
+    # Drop incomplete matches
+    df = df.dropna(subset=["home_goals", "away_goals", "outcome"])
+
+    # Save
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, index=False)
+
+    logger.info("Club training table: %d rows, %d columns", len(df), len(df.columns))
+    logger.info("Date range: %s to %s", df["date"].min(), df["date"].max())
+    logger.info("Outcome distribution:\n%s", df["outcome"].value_counts().to_string())
+    return df

@@ -49,7 +49,7 @@ COMPETITION_SEASONS: dict[int, list[int]] = {
 }
 
 PROCESSED_DIR = Path("data/processed")
-RAW_DIR = Path("data/raw")
+RAW_DIR = Path("data/raw/national")
 
 # Completed fixture status codes
 COMPLETED_STATUSES = {"FT", "AET", "PEN"}
@@ -397,6 +397,37 @@ def pull_players(
     else:
         logger.warning("No player data pulled")
     return df
+
+
+# ------------------------------------------------------------------
+# Squad roster pull (/players/squads)
+# ------------------------------------------------------------------
+
+
+def fetch_squad(client: APIFootballClient, team_id: int) -> dict[str, Any]:
+    """Fetch the current registered squad for a team."""
+    return client.get("/players/squads", {"team": team_id})
+
+
+def pull_squads(
+    client: APIFootballClient,
+    team_ids: list[int],
+) -> int:
+    """Pull current squads for a list of team IDs.
+
+    Responses are cached by the client — no separate CSV is produced because
+    the /players endpoint (already pulled) is what drives squad-quality features.
+    This pull just populates ``players_squads/`` for future lineup work.
+    """
+    count = 0
+    for tid in team_ids:
+        try:
+            fetch_squad(client, tid)
+            count += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Squad pull failed for team %d: %s", tid, exc)
+    logger.info("Pulled %d squads", count)
+    return count
 
 
 # ------------------------------------------------------------------
@@ -807,4 +838,111 @@ def pull_injuries(
         logger.info("Saved %d injury rows to %s", len(df), path)
     else:
         logger.warning("No injury data pulled")
+    return df
+
+
+# ------------------------------------------------------------------
+# Offline parsing of cached raw responses (no API calls)
+# ------------------------------------------------------------------
+
+
+CLUB_RAW_DIR = Path("data/raw/club")
+CLUB_LEAGUE_IDS = {39, 61, 140}  # Premier League, Ligue 1, La Liga
+
+
+def _iter_json(directory: Path) -> list[dict[str, Any]]:
+    """Load every cached JSON response in a directory."""
+    out: list[dict[str, Any]] = []
+    for p in sorted(directory.glob("*.json")):
+        try:
+            out.append(json.loads(p.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Skipping %s: %s", p, exc)
+    return out
+
+
+def build_club_fixtures_from_cache(
+    raw_dir: Path = CLUB_RAW_DIR,
+    output_dir: Path = PROCESSED_DIR,
+    league_ids: set[int] = CLUB_LEAGUE_IDS,
+) -> pd.DataFrame:
+    """Parse cached /fixtures responses under data/raw/club into a flat CSV.
+
+    Produces data/processed/all_fixtures_club.csv with the same column schema
+    as the national all_fixtures.csv — same downstream feature code applies.
+    """
+    all_fixtures: list[Fixture] = []
+    for payload in _iter_json(raw_dir / "fixtures"):
+        for item in payload.get("response", []):
+            try:
+                all_fixtures.append(Fixture.model_validate(item))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Skipping malformed fixture: %s", exc)
+
+    df = fixtures_to_dataframe(all_fixtures)
+    df = df.dropna(subset=["home_goals", "away_goals"])
+    df = df.drop_duplicates(subset=["fixture_id"])
+    df = df[df["league_id"].isin(league_ids)]
+    df = df.sort_values("date").reset_index(drop=True)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "all_fixtures_club.csv"
+    df.to_csv(path, index=False)
+    logger.info(
+        "Saved %d club fixtures to %s (leagues=%s, date range %s to %s)",
+        len(df),
+        path,
+        sorted(league_ids),
+        df["date"].min(),
+        df["date"].max(),
+    )
+    return df
+
+
+def build_club_players_from_cache(
+    raw_dir: Path = CLUB_RAW_DIR,
+    output_dir: Path = PROCESSED_DIR,
+) -> pd.DataFrame:
+    """Parse cached /players responses under data/raw/club into a players CSV."""
+    rows: list[dict[str, Any]] = []
+    for payload in _iter_json(raw_dir / "players"):
+        params = payload.get("parameters", {})
+        try:
+            team_id = int(params.get("team"))
+            season = int(params.get("season"))
+        except (TypeError, ValueError):
+            continue
+        for item in payload.get("response", []):
+            try:
+                player = Player.model_validate(item)
+            except Exception:  # noqa: BLE001
+                continue
+            rows.append(_extract_player_row(player, team_id, season))
+
+    df = pd.DataFrame(rows).drop_duplicates(subset=["player_id", "team_id", "season"])
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "players_club.csv"
+    df.to_csv(path, index=False)
+    logger.info("Saved %d club player rows to %s", len(df), path)
+    return df
+
+
+def build_club_h2h_from_cache(
+    raw_dir: Path = CLUB_RAW_DIR,
+    output_dir: Path = PROCESSED_DIR,
+) -> pd.DataFrame:
+    """Parse cached /fixtures/headtohead responses under data/raw/club into a CSV."""
+    fixtures: list[Fixture] = []
+    for payload in _iter_json(raw_dir / "fixtures_headtohead"):
+        for item in payload.get("response", []):
+            try:
+                fixtures.append(Fixture.model_validate(item))
+            except Exception:  # noqa: BLE001
+                continue
+
+    df = fixtures_to_dataframe(fixtures).drop_duplicates(subset=["fixture_id"])
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "h2h_raw_club.csv"
+    df.to_csv(path, index=False)
+    logger.info("Saved %d club H2H fixture rows to %s", len(df), path)
     return df
