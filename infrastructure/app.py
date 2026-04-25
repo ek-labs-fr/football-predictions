@@ -12,6 +12,7 @@ import os
 import aws_cdk as cdk
 
 from stacks.feature_stack import FeatureStack
+from stacks.inference_stack import InferenceStack
 from stacks.ingest_stack import IngestStack
 
 app = cdk.App()
@@ -30,12 +31,20 @@ ingest = IngestStack(
     data_bucket_name=app.node.try_get_context("data_bucket_name"),
 )
 
-FeatureStack(
+features = FeatureStack(
     app,
     "FPFeatureStack",
     env=env,
     data_bucket_name=ingest.data_bucket.bucket_name,
     ingest_state_machine_arn=ingest.state_machine.state_machine_arn,
+)
+
+InferenceStack(
+    app,
+    "FPInferenceStack",
+    env=env,
+    data_bucket_name=ingest.data_bucket.bucket_name,
+    feature_function_arn=features.feature_function.function_arn,
 )
 
 app.synth()

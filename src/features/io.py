@@ -61,6 +61,12 @@ def _put(key: str, body: bytes, content_type: str) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def read_bytes(arg: str | Path) -> bytes:
+    if using_s3():
+        return _get(_to_key(arg))
+    return Path(arg).read_bytes()
+
+
 def exists(arg: str | Path) -> bool:
     if using_s3():
         try:

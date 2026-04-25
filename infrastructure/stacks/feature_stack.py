@@ -22,6 +22,7 @@ from aws_cdk import (
     aws_events as events,
     aws_events_targets as targets,
     aws_lambda as _lambda,
+    aws_lambda_destinations as destinations,
     aws_s3 as s3,
 )
 from constructs import Construct
@@ -58,6 +59,7 @@ class FeatureStack(Stack):
             environment={
                 "DATA_BUCKET": data_bucket_name,
             },
+            on_success=destinations.EventBridgeDestination(),
         )
         data_bucket.grant_read_write(feature_fn)
 
