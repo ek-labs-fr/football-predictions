@@ -7,12 +7,8 @@
   >
     <mat-nav-list>
       <a mat-list-item routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="isMobile && sidenav.close()">
-        <mat-icon matListItemIcon>dashboard</mat-icon>
-        <span matListItemTitle>Dashboard</span>
-      </a>
-      <a mat-list-item routerLink="/tournament" routerLinkActive="active" (click)="isMobile && sidenav.close()">
         <mat-icon matListItemIcon>emoji_events</mat-icon>
-        <span matListItemTitle>Tournament</span>
+        <span matListItemTitle>Competitions</span>
       </a>
       <a mat-list-item routerLink="/about" routerLinkActive="active" (click)="isMobile && sidenav.close()">
         <mat-icon matListItemIcon>info</mat-icon>

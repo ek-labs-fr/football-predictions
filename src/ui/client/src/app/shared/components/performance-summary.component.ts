@@ -11,23 +11,23 @@ import { PerformanceSummary } from '../../services/prediction.service';
   template: `
     <mat-card class="perf-card">
       <mat-card-header>
-        <mat-card-title>Algorithm Performance</mat-card-title>
-        <mat-card-subtitle>{{ perf.completed_matches }} / {{ perf.total_matches }} matches completed</mat-card-subtitle>
+        <mat-card-title>Model accuracy</mat-card-title>
+        <mat-card-subtitle>{{ label }} &middot; {{ perf.total_matches }} matches</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
         <div class="stats-grid">
           <div class="stat">
             <div class="stat-value">{{ perf.outcome_accuracy * 100 | number:'1.1-1' }}%</div>
             <div class="stat-label">Outcome Accuracy</div>
-            <div class="stat-detail">{{ perf.correct_outcomes }} / {{ perf.completed_matches }}</div>
+            <div class="stat-detail">{{ perf.correct_outcomes }} / {{ perf.total_matches }}</div>
           </div>
           <div class="stat">
             <div class="stat-value">{{ perf.score_accuracy * 100 | number:'1.1-1' }}%</div>
             <div class="stat-label">Exact Score</div>
-            <div class="stat-detail">{{ perf.correct_scores }} / {{ perf.completed_matches }}</div>
+            <div class="stat-detail">{{ perf.correct_scores }} / {{ perf.total_matches }}</div>
           </div>
           <div class="stat">
-            <div class="stat-value">{{ perf.avg_mae | number:'1.2-2' }}</div>
+            <div class="stat-value">{{ perf.mae_avg | number:'1.2-2' }}</div>
             <div class="stat-label">Avg MAE</div>
             <div class="stat-detail">goals per team</div>
           </div>
@@ -84,4 +84,5 @@ import { PerformanceSummary } from '../../services/prediction.service';
 })
 export class PerformanceSummaryComponent {
   @Input({ required: true }) perf!: PerformanceSummary;
+  @Input() label = '';
 }

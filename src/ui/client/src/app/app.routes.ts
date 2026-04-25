@@ -4,17 +4,16 @@ export const routes: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
+      import('./features/competition-list/competition-list.component').then(
+        m => m.CompetitionListComponent,
+      ),
   },
   {
-    path: 'match/:id',
+    path: 'competition/:id',
     loadComponent: () =>
-      import('./features/match/match-detail.component').then(m => m.MatchDetailComponent),
-  },
-  {
-    path: 'tournament',
-    loadComponent: () =>
-      import('./features/tournament/tournament.component').then(m => m.TournamentComponent),
+      import('./features/competition-detail/competition-detail.component').then(
+        m => m.CompetitionDetailComponent,
+      ),
   },
   {
     path: 'about',

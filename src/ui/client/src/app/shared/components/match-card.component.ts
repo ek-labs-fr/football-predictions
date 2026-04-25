@@ -1,20 +1,18 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatchResult } from '../../services/prediction.service';
+import { MatchPrediction } from '../../services/prediction.service';
 
 @Component({
   selector: 'app-match-card',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatChipsModule, MatIconModule, MatTooltipModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatTooltipModule],
   template: `
-    <mat-card class="match-card" [routerLink]="['/match', match.fixture_id]">
+    <mat-card class="match-card">
       <mat-card-header>
-        <mat-card-subtitle>{{ match.date | date:'mediumDate' }} &middot; {{ match.league_name }} &middot; {{ match.round }}</mat-card-subtitle>
+        <mat-card-subtitle>{{ match.date | date:'mediumDate' }} &middot; {{ match.round }}</mat-card-subtitle>
       </mat-card-header>
 
       <mat-card-content>
@@ -40,21 +38,21 @@ import { MatchResult } from '../../services/prediction.service';
         </div>
 
         <div class="probs-bar">
-          <div class="prob home-win" [style.width.%]="match.home_win_prob * 100"
-               [matTooltip]="'Home: ' + (match.home_win_prob * 100 | number:'1.0-1') + '%'">
-            {{ match.home_win_prob * 100 | number:'1.0-0' }}%
+          <div class="prob home-win" [style.width.%]="match.p_home_win * 100"
+               [matTooltip]="'Home: ' + (match.p_home_win * 100 | number:'1.0-1') + '%'">
+            {{ match.p_home_win * 100 | number:'1.0-0' }}%
           </div>
-          <div class="prob draw-prob" [style.width.%]="match.draw_prob * 100"
-               [matTooltip]="'Draw: ' + (match.draw_prob * 100 | number:'1.0-1') + '%'">
-            {{ match.draw_prob * 100 | number:'1.0-0' }}%
+          <div class="prob draw-prob" [style.width.%]="match.p_draw * 100"
+               [matTooltip]="'Draw: ' + (match.p_draw * 100 | number:'1.0-1') + '%'">
+            {{ match.p_draw * 100 | number:'1.0-0' }}%
           </div>
-          <div class="prob away-win" [style.width.%]="match.away_win_prob * 100"
-               [matTooltip]="'Away: ' + (match.away_win_prob * 100 | number:'1.0-1') + '%'">
-            {{ match.away_win_prob * 100 | number:'1.0-0' }}%
+          <div class="prob away-win" [style.width.%]="match.p_away_win * 100"
+               [matTooltip]="'Away: ' + (match.p_away_win * 100 | number:'1.0-1') + '%'">
+            {{ match.p_away_win * 100 | number:'1.0-0' }}%
           </div>
         </div>
 
-        @if (match.actual_outcome) {
+        @if (match.actual_outcome !== undefined && match.actual_outcome !== null) {
           <div class="result-chip">
             @if (match.correct_outcome) {
               <mat-icon class="correct-icon">check_circle</mat-icon>
@@ -74,12 +72,7 @@ import { MatchResult } from '../../services/prediction.service';
   `,
   styles: `
     .match-card {
-      cursor: pointer;
       margin-bottom: 12px;
-      transition: box-shadow 0.2s;
-    }
-    .match-card:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     .teams-row {
       display: flex;
@@ -157,5 +150,5 @@ import { MatchResult } from '../../services/prediction.service';
   `,
 })
 export class MatchCardComponent {
-  @Input({ required: true }) match!: MatchResult;
+  @Input({ required: true }) match!: MatchPrediction;
 }

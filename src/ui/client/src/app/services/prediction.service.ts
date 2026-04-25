@@ -3,81 +3,76 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface ScorelineProbability {
-  home_goals: number;
-  away_goals: number;
-  probability: number;
-}
+export type Outcome = 'home_win' | 'draw' | 'away_win';
 
-export interface Prediction {
-  home_team_id: number;
-  away_team_id: number;
-  lambda_home: number;
-  lambda_away: number;
-  most_likely_score: string;
-  home_win: number;
-  draw: number;
-  away_win: number;
-  top_scorelines: ScorelineProbability[];
-}
-
-export interface MatchResult {
+export interface MatchPrediction {
   fixture_id: number;
   date: string;
-  home_team_id: number;
-  home_team_name: string;
-  away_team_id: number;
-  away_team_name: string;
-  predicted_home_goals: number;
-  predicted_away_goals: number;
-  predicted_score: string;
-  actual_home_goals: number | null;
-  actual_away_goals: number | null;
-  actual_score: string | null;
-  predicted_outcome: string;
-  actual_outcome: string | null;
-  correct_outcome: boolean | null;
-  correct_score: boolean | null;
-  home_win_prob: number;
-  draw_prob: number;
-  away_win_prob: number;
-  league_name: string;
   round: string;
+  home_team_name: string;
+  away_team_name: string;
+  predicted_score: string;
+  lambda_home: number;
+  lambda_away: number;
+  p_home_win: number;
+  p_draw: number;
+  p_away_win: number;
+  predicted_outcome: Outcome;
+  actual_home_goals?: number;
+  actual_away_goals?: number;
+  actual_score?: string;
+  actual_outcome?: Outcome;
+  correct_outcome?: boolean;
+  correct_score?: boolean;
 }
 
 export interface PerformanceSummary {
   total_matches: number;
-  completed_matches: number;
   correct_outcomes: number;
   correct_scores: number;
   outcome_accuracy: number;
   score_accuracy: number;
-  avg_mae: number;
+  mae_avg: number;
 }
 
-export interface MatchListResponse {
-  matches: MatchResult[];
+export interface UpcomingResponse {
+  competition_id: string;
+  competition_name: string;
+  matches: MatchPrediction[];
+}
+
+export interface PastResponse {
+  competition_id: string;
+  competition_name: string;
+  label: string;
+  matches: MatchPrediction[];
   performance: PerformanceSummary;
+}
+
+export interface Competition {
+  id: string;
+  name: string;
+  mode: 'national' | 'club';
+  past_label: string;
+  upcoming_count: number;
+  past_count: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class PredictionService {
-  private readonly apiUrl = environment.apiUrl;
+  private readonly dataUrl = environment.dataUrl;
 
   constructor(private http: HttpClient) {}
 
-  predict(homeTeamId: number, awayTeamId: number): Observable<Prediction> {
-    return this.http.post<Prediction>(`${this.apiUrl}/predict`, {
-      home_team_id: homeTeamId,
-      away_team_id: awayTeamId,
-    });
+  getCompetitions(): Observable<Competition[]> {
+    return this.http.get<Competition[]>(`${this.dataUrl}/competitions.json`);
   }
 
-  getMatches(): Observable<MatchListResponse> {
-    return this.http.get<MatchListResponse>(`${this.apiUrl}/matches`);
+  getUpcoming(competitionId: string): Observable<UpcomingResponse> {
+    return this.http.get<UpcomingResponse>(`${this.dataUrl}/upcoming_${competitionId}.json`);
   }
 
-  getMatch(fixtureId: number): Observable<MatchResult> {
-    return this.http.get<MatchResult>(`${this.apiUrl}/matches/${fixtureId}`);
+  getPast(competitionId: string): Observable<PastResponse> {
+    return this.http.get<PastResponse>(`${this.dataUrl}/past_${competitionId}.json`);
   }
 }
