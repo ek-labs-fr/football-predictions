@@ -1,13 +1,21 @@
-"""Batch fixture prediction core: upcoming + holdout, per competition.
+"""Batch fixture prediction core: upcoming + recent + holdout, per competition.
 
 For each configured competition (WC 2026, Premier League, La Liga, Ligue 1):
     * upcoming  — predictions on the inference table for league_id
-    * past      — predictions on the training-table holdout (with actuals merged)
+    * recent    — predictions for FT fixtures played in the last 30 days,
+                  with actuals merged in. Predictions are frozen on
+                  first write (predictions/<fid>.json) so retrains
+                  don't retro-rewrite history.
+    * holdout   — predictions on the training-table holdout (with actuals).
+                  NOT frozen: re-runs every time, so model improvements
+                  show up on the holdout accuracy summary.
 
 Outputs go to S3 (when DATA_BUCKET is set) under:
     web/data/competitions.json
     web/data/upcoming_<competition>.json
+    web/data/recent_<competition>.json
     web/data/past_<competition>.json
+    predictions/<fixture_id>.json   ← immutable per-fixture frozen predictions
 
 The legacy combined CSV/Parquet files (predictions_{national_wc2026,club})
 are still emitted for debugging.
@@ -17,7 +25,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -28,6 +38,11 @@ from src.models.calibrate import _bivariate_poisson_matrix
 from src.models.train import _make_holdout_masks, get_feature_columns
 
 logger = logging.getLogger(__name__)
+
+
+_RECENT_WINDOW_DAYS = 30
+_FINISHED_STATUSES = {"FT", "AET", "PEN"}
+_PREDICTIONS_PREFIX = "predictions"
 
 
 # ------------------------------------------------------------------
@@ -149,7 +164,92 @@ def _predict_rows(
 
 
 # ------------------------------------------------------------------
-# Mode-level: upcoming + holdout DataFrames
+# Frozen predictions store — write-once per fixture
+# ------------------------------------------------------------------
+
+
+_PREDICTION_FIELDS = (
+    "lambda_home", "lambda_away", "predicted_score",
+    "p_home_win", "p_draw", "p_away_win", "predicted_outcome",
+)
+
+
+def _existing_prediction_fids() -> set[int]:
+    fids: set[int] = set()
+    for key in io.list_keys(f"{_PREDICTIONS_PREFIX}/"):
+        if not key.endswith(".json"):
+            continue
+        try:
+            fids.add(int(Path(key).stem))
+        except ValueError:
+            continue
+    return fids
+
+
+def _store_prediction(fid: int, prediction_row: pd.Series, backfill: bool) -> dict:
+    payload = {
+        "fixture_id": fid,
+        "prediction_made_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "backfill": bool(backfill),
+        **{f: _coerce_scalar(prediction_row[f]) for f in _PREDICTION_FIELDS},
+    }
+    io.write_json(f"{_PREDICTIONS_PREFIX}/{fid}.json", payload)
+    return payload
+
+
+def _load_prediction(fid: int) -> dict:
+    return io.read_json(f"{_PREDICTIONS_PREFIX}/{fid}.json")
+
+
+def _coerce_scalar(value: object) -> object:
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except (ValueError, AttributeError):
+            return value
+    return value
+
+
+def _materialise_predictions(
+    rows: pd.DataFrame,
+    feature_cols: list[str],
+    medians: pd.Series,
+    model_home: object,
+    model_away: object,
+    scaler: object | None,
+    rho: float,
+    backfill: bool,
+) -> pd.DataFrame:
+    """For every fixture in ``rows``: load its frozen prediction or create one.
+
+    Returns a DataFrame with the original ``rows`` columns plus the prediction
+    fields, in the same order as the input.
+    """
+    if rows.empty:
+        return rows.copy()
+
+    existing = _existing_prediction_fids()
+    fids = rows["fixture_id"].astype(int)
+    needs_predict = ~fids.isin(existing)
+    new_rows = rows[needs_predict.values].copy()
+
+    if not new_rows.empty:
+        predicted = _predict_rows(
+            new_rows, feature_cols, medians, model_home, model_away, scaler, rho,
+        )
+        for _, p in predicted.iterrows():
+            _store_prediction(int(p["fixture_id"]), p, backfill=backfill)
+        logger.info("Froze %d new predictions (backfill=%s)", len(predicted), backfill)
+
+    payloads = [_load_prediction(int(fid)) for fid in fids]
+    pred_df = pd.DataFrame(payloads)
+    return rows.reset_index(drop=True).join(
+        pred_df.drop(columns=["fixture_id"]).reset_index(drop=True),
+    )
+
+
+# ------------------------------------------------------------------
+# Mode-level: upcoming + recent + holdout DataFrames
 # ------------------------------------------------------------------
 
 
@@ -167,7 +267,10 @@ def predict_upcoming(mode: str) -> pd.DataFrame:
     model_home, model_away, scaler, rho = _load_artefacts(cfg.artefacts_prefix)
     inf = io.read_parquet(cfg.inference_table)
 
-    out = _predict_rows(inf, feature_cols, medians, model_home, model_away, scaler, rho)
+    out = _materialise_predictions(
+        inf, feature_cols, medians, model_home, model_away, scaler, rho,
+        backfill=False,
+    )
     out = out.sort_values("date").reset_index(drop=True)
 
     legacy = out[
@@ -182,6 +285,47 @@ def predict_upcoming(mode: str) -> pd.DataFrame:
     io.write_parquet(cfg.legacy_parquet, legacy)
 
     logger.info("[%s] upcoming: %d rows (rho=%.4f)", mode, len(out), rho)
+    return out
+
+
+def predict_recent(mode: str, days: int = _RECENT_WINDOW_DAYS) -> pd.DataFrame:
+    cfg = MODES[mode]
+    train_df = _ensure_train_df_dates(io.read_csv(cfg.training_table))
+    feature_cols = get_feature_columns(train_df, mode=mode)
+    medians = train_df[feature_cols].median()
+
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    recent = train_df[
+        (train_df["status"].isin(_FINISHED_STATUSES))
+        & (train_df["date"] >= pd.Timestamp(cutoff))
+    ].copy()
+
+    if recent.empty:
+        logger.info("[%s] recent: no FT fixtures in last %d days", mode, days)
+        return recent
+
+    model_home, model_away, scaler, rho = _load_artefacts(cfg.artefacts_prefix)
+    out = _materialise_predictions(
+        recent, feature_cols, medians, model_home, model_away, scaler, rho,
+        backfill=True,
+    )
+
+    out["actual_home_goals"] = out["home_goals"].astype(int)
+    out["actual_away_goals"] = out["away_goals"].astype(int)
+    out["actual_score"] = (
+        out["actual_home_goals"].astype(str) + "-" + out["actual_away_goals"].astype(str)
+    )
+    out["actual_outcome"] = np.where(
+        out["actual_home_goals"] > out["actual_away_goals"], "home_win",
+        np.where(
+            out["actual_home_goals"] < out["actual_away_goals"], "away_win", "draw",
+        ),
+    )
+    out["correct_outcome"] = out["predicted_outcome"] == out["actual_outcome"]
+    out["correct_score"] = out["predicted_score"] == out["actual_score"]
+    out = out.sort_values("date", ascending=False).reset_index(drop=True)
+
+    logger.info("[%s] recent: %d FT fixtures in last %d days", mode, len(out), days)
     return out
 
 
@@ -228,6 +372,7 @@ _UPCOMING_COLS = [
     "lambda_home", "lambda_away",
     "p_home_win", "p_draw", "p_away_win",
     "predicted_outcome",
+    "prediction_made_at",
 ]
 
 _PAST_EXTRA_COLS = [
@@ -280,8 +425,9 @@ def _filter_competition(df: pd.DataFrame, league_id: int) -> pd.DataFrame:
 
 
 def publish_dashboard_json() -> dict[str, object]:
-    """Run upcoming + holdout for both modes, then write per-competition JSON."""
+    """Run upcoming + recent + holdout for both modes, write per-competition JSON."""
     upcoming_by_mode = {m: predict_upcoming(m) for m in MODES}
+    recent_by_mode = {m: predict_recent(m) for m in MODES}
     past_by_mode = {m: predict_holdout(m) for m in MODES}
 
     summary: dict[str, object] = {"competitions": []}
@@ -289,12 +435,20 @@ def publish_dashboard_json() -> dict[str, object]:
     manifest = []
     for comp in COMPETITIONS:
         upcoming_df = _filter_competition(upcoming_by_mode[comp.mode], comp.league_id)
+        recent_df = _filter_competition(recent_by_mode[comp.mode], comp.league_id)
         past_df = _filter_competition(past_by_mode[comp.mode], comp.league_id)
 
         upcoming_payload = {
             "competition_id": comp.id,
             "competition_name": comp.name,
             "matches": _to_records(upcoming_df, _UPCOMING_COLS),
+        }
+        recent_payload = {
+            "competition_id": comp.id,
+            "competition_name": comp.name,
+            "window_days": _RECENT_WINDOW_DAYS,
+            "matches": _to_records(recent_df, _UPCOMING_COLS + _PAST_EXTRA_COLS),
+            "performance": _performance(recent_df),
         }
         past_payload = {
             "competition_id": comp.id,
@@ -305,6 +459,7 @@ def publish_dashboard_json() -> dict[str, object]:
         }
 
         io.write_json(f"web/data/upcoming_{comp.id}.json", upcoming_payload)
+        io.write_json(f"web/data/recent_{comp.id}.json", recent_payload)
         io.write_json(f"web/data/past_{comp.id}.json", past_payload)
 
         manifest.append({
@@ -312,14 +467,18 @@ def publish_dashboard_json() -> dict[str, object]:
             "name": comp.name,
             "mode": comp.mode,
             "past_label": comp.past_label,
+            "recent_window_days": _RECENT_WINDOW_DAYS,
             "upcoming_count": len(upcoming_payload["matches"]),
+            "recent_count": len(recent_payload["matches"]),
             "past_count": len(past_payload["matches"]),
         })
         summary["competitions"].append({
             "id": comp.id,
             "upcoming": len(upcoming_payload["matches"]),
+            "recent": len(recent_payload["matches"]),
             "past": len(past_payload["matches"]),
-            "outcome_accuracy": past_payload["performance"]["outcome_accuracy"],
+            "recent_outcome_accuracy": recent_payload["performance"]["outcome_accuracy"],
+            "holdout_outcome_accuracy": past_payload["performance"]["outcome_accuracy"],
         })
 
     io.write_json("web/data/competitions.json", manifest)
