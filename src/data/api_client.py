@@ -222,7 +222,10 @@ class APIFootballClient:
                     continue
 
                 resp.raise_for_status()
-                self._capture_quota_headers(resp.headers)
+                try:
+                    self._capture_quota_headers(resp.headers)
+                except Exception:  # noqa: BLE001 — quota capture is best-effort
+                    pass
                 return resp.json()  # type: ignore[no-any-return]
 
             except requests.ConnectionError as exc:
