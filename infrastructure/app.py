@@ -11,6 +11,7 @@ import os
 
 import aws_cdk as cdk
 
+from stacks.cicd_stack import CICDStack
 from stacks.feature_stack import FeatureStack
 from stacks.hosting_stack import HostingStack
 from stacks.inference_stack import InferenceStack
@@ -63,6 +64,13 @@ ObservabilityStack(
     ingest_state_machine_arn=ingest.state_machine.state_machine_arn,
     ingest_function_name=ingest.ingest_function.function_name,
     alert_email=app.node.try_get_context("alert_email") or "ekmillenium@hotmail.com",
+)
+
+CICDStack(
+    app,
+    "FPCICDStack",
+    env=env,
+    github_repo=app.node.try_get_context("github_repo") or "ek-labs-fr/football-predictions",
 )
 
 app.synth()
