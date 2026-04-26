@@ -23,10 +23,11 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, timedelta, timezone
-from typing import Any
+from datetime import UTC, date, datetime, timedelta
+from typing import TYPE_CHECKING, Any
 
-from src.data.api_client import APIFootballClient
+if TYPE_CHECKING:
+    from src.data.api_client import APIFootballClient
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +93,7 @@ def save_manifest(s3, bucket: str, domain: str, fixture_ids: set[int]) -> None: 
     body = json.dumps(
         {
             "domain": domain,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "count": len(fixture_ids),
             "fixture_ids": sorted(fixture_ids),
         },
@@ -122,7 +123,7 @@ def _put_json(s3, bucket: str, key: str, payload: Any) -> None:  # noqa: ANN001
 
 
 def _today_utc() -> date:
-    return datetime.now(timezone.utc).date()
+    return datetime.now(UTC).date()
 
 
 def fetch_fixtures_window(
@@ -152,7 +153,10 @@ def fetch_fixtures_window(
             "from": date_from,
             "to": date_to,
         }
-        logger.info("Fetching fixtures %s season=%d from=%s to=%s", league_id, season, date_from, date_to)
+        logger.info(
+            "Fetching fixtures %s season=%d from=%s to=%s",
+            league_id, season, date_from, date_to,
+        )
         payload = client.get("/fixtures", params)
         key = (
             f"{domain}/fixtures/{run_date.isoformat()}/"

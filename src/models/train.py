@@ -129,7 +129,10 @@ class TrainedModel:
 
 
 def get_feature_columns(df: pd.DataFrame, mode: str = "national") -> list[str]:
-    """Identify numeric feature columns (exclude labels, IDs, strings, and low-importance features)."""
+    """Identify numeric feature columns.
+
+    Excludes labels, IDs, string columns, and low-importance features.
+    """
     numeric = df.select_dtypes(include="number").columns.tolist()
     drop = _DROP_FEATURES_BY_MODE.get(mode, set())
     excluded = _NON_FEATURE_COLS | drop

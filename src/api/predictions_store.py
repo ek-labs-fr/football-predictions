@@ -46,7 +46,8 @@ def _load_national_ids(processed_dir: Path) -> set[int] | None:
     path = processed_dir / "team_lookup.json"
     if not path.exists():
         return None
-    lookup = json.load(open(path, encoding="utf-8"))
+    with path.open(encoding="utf-8") as f:
+        lookup = json.load(f)
     return set(lookup.values())
 
 

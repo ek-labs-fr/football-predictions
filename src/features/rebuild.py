@@ -92,10 +92,7 @@ def _row_from_fixture_item(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _list_fixture_keys(domain: str) -> list[str]:
-    if io.using_s3():
-        prefix = f"{domain}/fixtures/"
-    else:
-        prefix = f"data/raw/{domain}/fixtures"
+    prefix = f"{domain}/fixtures/" if io.using_s3() else f"data/raw/{domain}/fixtures"
     return [k for k in io.list_keys(prefix) if k.endswith(".json")]
 
 

@@ -32,7 +32,7 @@ import json
 import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import boto3
@@ -108,7 +108,7 @@ def _plan_uploads(
 
 
 def _upload_one(
-    s3: "boto3.client",  # noqa: ANN001
+    s3: boto3.client,  # noqa: ANN001
     bucket: str,
     path: Path,
     key: str,
@@ -125,7 +125,7 @@ def _put_manifest(s3, bucket: str, domain: str, ids: set[int]) -> None:  # noqa:
     body = json.dumps(
         {
             "domain": domain,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "count": len(ids),
             "fixture_ids": sorted(ids),
             "source": "backfill_s3.py",
@@ -184,7 +184,10 @@ def main(bucket: str, workers: int, dry_run: bool) -> None:
                 if done % 500 == 0:
                     logger.info("  progress: %d/%d uploaded", done, len(uploads))
 
-        logger.info("Domain=%s: uploaded %d/%d (failures=%d)", domain, done - failures, len(uploads), failures)
+        logger.info(
+            "Domain=%s: uploaded %d/%d (failures=%d)",
+            domain, done - failures, len(uploads), failures,
+        )
         grand_uploads += done
         grand_failures += failures
 
@@ -197,7 +200,10 @@ def main(bucket: str, workers: int, dry_run: bool) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Backfill local raw cache into S3")
-    parser.add_argument("--bucket", required=True, help="Target S3 bucket (from CDK output DataBucketName)")
+    parser.add_argument(
+        "--bucket", required=True,
+        help="Target S3 bucket (from CDK output DataBucketName)",
+    )
     parser.add_argument("--workers", type=int, default=20, help="Concurrent uploads")
     parser.add_argument("--dry-run", action="store_true", help="Plan only; don't upload")
     args = parser.parse_args()

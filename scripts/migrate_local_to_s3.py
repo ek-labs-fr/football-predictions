@@ -24,8 +24,9 @@ import json
 import logging
 import sys
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import boto3
 

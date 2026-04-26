@@ -14,14 +14,19 @@ to bootstrap OIDC from scratch.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from aws_cdk import (
     CfnOutput,
     Duration,
     Stack,
+)
+from aws_cdk import (
     aws_iam as iam,
 )
-from constructs import Construct
 
+if TYPE_CHECKING:
+    from constructs import Construct
 
 _GITHUB_OIDC_ISSUER = "https://token.actions.githubusercontent.com"
 _GITHUB_OIDC_AUDIENCE = "sts.amazonaws.com"

@@ -10,7 +10,6 @@ from __future__ import annotations
 import os
 
 import aws_cdk as cdk
-
 from stacks.cicd_stack import CICDStack
 from stacks.feature_stack import FeatureStack
 from stacks.hosting_stack import HostingStack

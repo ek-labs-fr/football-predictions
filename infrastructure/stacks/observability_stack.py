@@ -19,17 +19,28 @@ Custom metrics are emitted by src/data/lambda_handlers.py under the
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from aws_cdk import (
     CfnOutput,
     Duration,
     Stack,
+)
+from aws_cdk import (
     aws_cloudwatch as cw,
+)
+from aws_cdk import (
     aws_cloudwatch_actions as cw_actions,
+)
+from aws_cdk import (
     aws_sns as sns,
+)
+from aws_cdk import (
     aws_sns_subscriptions as subs,
 )
-from constructs import Construct
 
+if TYPE_CHECKING:
+    from constructs import Construct
 
 _API_FOOTBALL_PRO_DAILY_LIMIT = 7500
 _QUOTA_LOW_THRESHOLD = int(_API_FOOTBALL_PRO_DAILY_LIMIT * 0.20)

@@ -629,7 +629,10 @@ def pull_odds(
                 extracted["fixture_id"] = int(fid)
                 rows.append(extracted)
         if (i + 1) % 200 == 0:
-            logger.info("Odds progress: %d/%d fixtures (%d with data)", i + 1, len(fixture_ids), len(rows))
+            logger.info(
+                "Odds progress: %d/%d fixtures (%d with data)",
+                i + 1, len(fixture_ids), len(rows),
+            )
 
     df = pd.DataFrame(rows)
     if not df.empty:

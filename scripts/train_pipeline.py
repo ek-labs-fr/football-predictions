@@ -27,8 +27,7 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-
-import pandas as pd
+from typing import TYPE_CHECKING
 
 from src.features.build import build_club_training_table, build_training_table
 from src.models.calibrate import fit_rho, save_calibration
@@ -40,6 +39,9 @@ from src.models.train import (
     train_baselines,
     train_candidates,
 )
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 logging.basicConfig(
     level=logging.INFO,

@@ -14,19 +14,31 @@ coupling).
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aws_cdk import (
     CfnOutput,
     Duration,
     Stack,
+)
+from aws_cdk import (
     aws_events as events,
+)
+from aws_cdk import (
     aws_events_targets as targets,
+)
+from aws_cdk import (
     aws_lambda as _lambda,
+)
+from aws_cdk import (
     aws_lambda_destinations as destinations,
+)
+from aws_cdk import (
     aws_s3 as s3,
 )
-from constructs import Construct
 
+if TYPE_CHECKING:
+    from constructs import Construct
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

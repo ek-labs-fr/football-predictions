@@ -13,17 +13,29 @@ Components:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from aws_cdk import (
     CfnOutput,
     Duration,
     RemovalPolicy,
     Stack,
+)
+from aws_cdk import (
     aws_cloudfront as cloudfront,
+)
+from aws_cdk import (
     aws_cloudfront_origins as origins,
+)
+from aws_cdk import (
     aws_iam as iam,
+)
+from aws_cdk import (
     aws_s3 as s3,
 )
-from constructs import Construct
+
+if TYPE_CHECKING:
+    from constructs import Construct
 
 
 class HostingStack(Stack):
@@ -119,7 +131,10 @@ class HostingStack(Stack):
         CfnOutput(
             self,
             "DataBucketPolicyStatement",
-            description="Add this statement to the data bucket's bucket policy for CloudFront read access",
+            description=(
+                "Add this statement to the data bucket's bucket policy "
+                "for CloudFront read access"
+            ),
             value=str({
                 "Sid": "AllowCloudFrontReadWeb",
                 "Effect": "Allow",
