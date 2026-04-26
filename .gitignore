@@ -23,9 +23,6 @@ data/processed/*
 data/external/*
 !data/external/.gitkeep
 
-# uv
-uv.lock
-
 # Node.js
 node_modules/
 
