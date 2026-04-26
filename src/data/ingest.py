@@ -1,4 +1,4 @@
-"""Data ingestion functions for pulling national team data from API-Football v3."""
+"""This file contains data ingestion functions for pulling national team data from API-Football v3."""
 
 from __future__ import annotations
 
