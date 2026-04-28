@@ -1,38 +1,51 @@
-
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
+
+// Eric FC brand palette
+:root {
+  --ericfc-navy: #1B3358;
+  --ericfc-navy-700: #142845;
+  --ericfc-navy-300: #335379;
+  --ericfc-gold: #C29B51;
+  --ericfc-gold-300: #D9B976;
+  --ericfc-shadow-blue: #4B6A88;
+  --ericfc-stadium-white: #F8F9FA;
+  --ericfc-line: #E2E6EB;
+  --ericfc-success: #2E7D32;
+  --ericfc-danger: #C62828;
+  --ericfc-warning: #C29B51;
+}
 
 html {
   height: 100%;
   @include mat.theme((
     color: (
       primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
+      tertiary: mat.$yellow-palette,
     ),
-    typography: Roboto,
+    typography: Inter,
     density: 0,
   ));
+  --mat-sys-primary: var(--ericfc-navy);
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-surface: var(--ericfc-stadium-white);
+  --mat-sys-on-surface: var(--ericfc-navy);
+  --mat-sys-surface-container: #ffffff;
+  --mat-sys-outline-variant: var(--ericfc-line);
 }
+
+* { box-sizing: border-box; }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
   color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
+  background-color: var(--ericfc-stadium-white);
+  color: var(--ericfc-navy);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
   margin: 0;
   height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-/* You can add global styles to this file, and also import other style files */
+
+a { color: var(--ericfc-navy); text-decoration: none; }
+a:hover { color: var(--ericfc-gold); }
