@@ -59,3 +59,9 @@ src/ui/client/public/data/
 # Model binaries
 *.pkl
 *.joblib
+
+# Local Claude Code project state
+.claude/
+
+# Local prediction output dumps
+predictions/
