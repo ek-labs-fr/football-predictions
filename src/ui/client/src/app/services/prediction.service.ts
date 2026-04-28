@@ -9,7 +9,10 @@ export interface MatchPrediction {
   fixture_id: number;
   date: string;
   round: string;
+  league_id?: number;
+  home_team_id?: number;
   home_team_name: string;
+  away_team_id?: number;
   away_team_name: string;
   predicted_score: string;
   lambda_home: number;
@@ -62,6 +65,7 @@ export interface Competition {
   id: string;
   name: string;
   mode: 'national' | 'club';
+  league_id?: number;
   past_label: string;
   recent_window_days: number;
   upcoming_count: number;

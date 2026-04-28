@@ -367,7 +367,9 @@ def predict_holdout(mode: str) -> pd.DataFrame:
 
 _UPCOMING_COLS = [
     "fixture_id", "date", "round",
-    "home_team_name", "away_team_name",
+    "league_id",
+    "home_team_id", "home_team_name",
+    "away_team_id", "away_team_name",
     "predicted_score",
     "lambda_home", "lambda_away",
     "p_home_win", "p_draw", "p_away_win",
@@ -466,6 +468,7 @@ def publish_dashboard_json() -> dict[str, object]:
             "id": comp.id,
             "name": comp.name,
             "mode": comp.mode,
+            "league_id": comp.league_id,
             "past_label": comp.past_label,
             "recent_window_days": _RECENT_WINDOW_DAYS,
             "upcoming_count": len(upcoming_payload["matches"]),
