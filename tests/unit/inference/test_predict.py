@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
 from src.features import io as feature_io
 from src.inference.predict import _DECISION_RULE_VERSION, _store_prediction
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestVersionStamping:
