@@ -118,6 +118,27 @@ def _load_artefacts(prefix: str) -> tuple[object, object, object | None, float]:
 
 
 _OUTCOMES = ("home_win", "draw", "away_win")
+_MAX_PREDICTED_GOALS = 10
+
+
+def _expected_scoreline(
+    lambda_home: float,
+    lambda_away: float,
+    predicted_outcome: str,
+) -> tuple[int, int]:
+    # Argmax of the Poisson scoreline matrix collapses to 1-0/1-1/0-1 because
+    # mode(Poisson(λ)) = floor(λ) and typical football λ sits in [0.6, 1.7].
+    # Use rounded expected goals instead, then enforce consistency with
+    # predicted_outcome (else the displayed score can disagree with W/D/L).
+    h = int(round(lambda_home))
+    a = int(round(lambda_away))
+    if predicted_outcome == "home_win" and h <= a:
+        h = a + 1
+    elif predicted_outcome == "away_win" and a <= h:
+        a = h + 1
+    elif predicted_outcome == "draw" and h != a:
+        h = a = int(round((lambda_home + lambda_away) / 2))
+    return min(h, _MAX_PREDICTED_GOALS), min(a, _MAX_PREDICTED_GOALS)
 
 
 def _predict_rows(
@@ -140,16 +161,22 @@ def _predict_rows(
     la = np.clip(model_away.predict(X_input), 0.01, 10.0)
 
     scores: list[str] = []
+    outcomes: list[str] = []
     p_h: list[float] = []
     p_d: list[float] = []
     p_a: list[float] = []
     for h, a in zip(lh, la, strict=True):
         mat = _bivariate_poisson_matrix(h, a, rho)
-        idx = np.unravel_index(mat.argmax(), mat.shape)
-        scores.append(f"{int(idx[0])}-{int(idx[1])}")
-        p_h.append(float(np.tril(mat, -1).sum()))
-        p_d.append(float(np.trace(mat)))
-        p_a.append(float(np.triu(mat, 1).sum()))
+        ph = float(np.tril(mat, -1).sum())
+        pd_ = float(np.trace(mat))
+        pa = float(np.triu(mat, 1).sum())
+        outcome = _OUTCOMES[int(np.argmax([ph, pd_, pa]))]
+        s_h, s_a = _expected_scoreline(float(h), float(a), outcome)
+        scores.append(f"{s_h}-{s_a}")
+        outcomes.append(outcome)
+        p_h.append(ph)
+        p_d.append(pd_)
+        p_a.append(pa)
 
     out = rows.copy()
     out["lambda_home"] = np.round(lh, 3)
@@ -158,8 +185,7 @@ def _predict_rows(
     out["p_home_win"] = np.round(p_h, 4)
     out["p_draw"] = np.round(p_d, 4)
     out["p_away_win"] = np.round(p_a, 4)
-    probs = np.column_stack([p_h, p_d, p_a])
-    out["predicted_outcome"] = [_OUTCOMES[i] for i in probs.argmax(axis=1)]
+    out["predicted_outcome"] = outcomes
     return out
 
 
