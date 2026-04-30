@@ -44,6 +44,11 @@ _RECENT_WINDOW_DAYS = 30
 _FINISHED_STATUSES = {"FT", "AET", "PEN"}
 _PREDICTIONS_PREFIX = "predictions"
 
+# Bump when the inference decision rule changes. Stamped on every frozen
+# prediction so we can later distinguish predictions made under different
+# rules (e.g. argmax_v0 → rounded_expected_v1 from PR #10).
+_DECISION_RULE_VERSION = "rounded_expected_v1"
+
 
 # ------------------------------------------------------------------
 # Mode + competition registry
@@ -103,13 +108,16 @@ def _load_pickle(key: str) -> object:
     return joblib.load(BytesIO(io.read_bytes(key)))
 
 
-def _load_artefacts(prefix: str) -> tuple[object, object, object | None, float]:
+def _load_artefacts(
+    prefix: str,
+) -> tuple[object, object, object | None, float, str | None]:
     model_home = _load_pickle(f"{prefix}/model_final_home.pkl")
     model_away = _load_pickle(f"{prefix}/model_final_away.pkl")
     scaler_key = f"{prefix}/model_final_scaler.pkl"
     scaler = _load_pickle(scaler_key) if io.exists(scaler_key) else None
     rho = float(io.read_json(f"{prefix}/rho.json")["rho"])
-    return model_home, model_away, scaler, rho
+    model_trained_at = io.last_modified(f"{prefix}/model_final_home.pkl")
+    return model_home, model_away, scaler, rho, model_trained_at
 
 
 # ------------------------------------------------------------------
@@ -212,11 +220,18 @@ def _existing_prediction_fids() -> set[int]:
     return fids
 
 
-def _store_prediction(fid: int, prediction_row: pd.Series, backfill: bool) -> dict:
+def _store_prediction(
+    fid: int,
+    prediction_row: pd.Series,
+    backfill: bool,
+    model_trained_at: str | None,
+) -> dict:
     payload = {
         "fixture_id": fid,
         "prediction_made_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "backfill": bool(backfill),
+        "decision_rule_version": _DECISION_RULE_VERSION,
+        "model_trained_at": model_trained_at,
         **{f: _coerce_scalar(prediction_row[f]) for f in _PREDICTION_FIELDS},
     }
     io.write_json(f"{_PREDICTIONS_PREFIX}/{fid}.json", payload)
@@ -245,6 +260,7 @@ def _materialise_predictions(
     scaler: object | None,
     rho: float,
     backfill: bool,
+    model_trained_at: str | None,
 ) -> pd.DataFrame:
     """For every fixture in ``rows``: load its frozen prediction or create one.
 
@@ -264,7 +280,11 @@ def _materialise_predictions(
             new_rows, feature_cols, medians, model_home, model_away, scaler, rho,
         )
         for _, p in predicted.iterrows():
-            _store_prediction(int(p["fixture_id"]), p, backfill=backfill)
+            _store_prediction(
+                int(p["fixture_id"]), p,
+                backfill=backfill,
+                model_trained_at=model_trained_at,
+            )
         logger.info("Froze %d new predictions (backfill=%s)", len(predicted), backfill)
 
     payloads = [_load_prediction(int(fid)) for fid in fids]
@@ -290,12 +310,13 @@ def predict_upcoming(mode: str) -> pd.DataFrame:
     feature_cols = get_feature_columns(train_df, mode=mode)
     medians = train_df[feature_cols].median()
 
-    model_home, model_away, scaler, rho = _load_artefacts(cfg.artefacts_prefix)
+    model_home, model_away, scaler, rho, trained_at = _load_artefacts(cfg.artefacts_prefix)
     inf = io.read_parquet(cfg.inference_table)
 
     out = _materialise_predictions(
         inf, feature_cols, medians, model_home, model_away, scaler, rho,
         backfill=False,
+        model_trained_at=trained_at,
     )
     out = out.sort_values("date").reset_index(drop=True)
 
@@ -330,10 +351,11 @@ def predict_recent(mode: str, days: int = _RECENT_WINDOW_DAYS) -> pd.DataFrame:
         logger.info("[%s] recent: no FT fixtures in last %d days", mode, days)
         return recent
 
-    model_home, model_away, scaler, rho = _load_artefacts(cfg.artefacts_prefix)
+    model_home, model_away, scaler, rho, trained_at = _load_artefacts(cfg.artefacts_prefix)
     out = _materialise_predictions(
         recent, feature_cols, medians, model_home, model_away, scaler, rho,
         backfill=True,
+        model_trained_at=trained_at,
     )
 
     out["actual_home_goals"] = out["home_goals"].astype(int)
@@ -364,7 +386,7 @@ def predict_holdout(mode: str) -> pd.DataFrame:
     _train_mask, test_mask = _make_holdout_masks(train_df, mode)
     holdout = train_df[test_mask].copy()
 
-    model_home, model_away, scaler, rho = _load_artefacts(cfg.artefacts_prefix)
+    model_home, model_away, scaler, rho, _trained_at = _load_artefacts(cfg.artefacts_prefix)
     out = _predict_rows(holdout, feature_cols, medians, model_home, model_away, scaler, rho)
 
     out["actual_home_goals"] = out["home_goals"].astype(int)
