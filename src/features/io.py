@@ -77,6 +77,27 @@ def exists(arg: str | Path) -> bool:
     return Path(arg).exists()
 
 
+def last_modified(arg: str | Path) -> str | None:
+    """ISO-8601 UTC timestamp of when the object was last modified, or None
+    if the object does not exist.
+
+    Used to stamp predictions with the timestamp of the trained-model
+    artefacts that produced them.
+    """
+    from datetime import UTC, datetime
+    if using_s3():
+        try:
+            head = _client().head_object(Bucket=_bucket(), Key=_to_key(arg))
+        except _client().exceptions.ClientError:
+            return None
+        return head["LastModified"].astimezone(UTC).isoformat(timespec="seconds")
+    p = Path(arg)
+    if not p.exists():
+        return None
+    ts = datetime.fromtimestamp(p.stat().st_mtime, tz=UTC)
+    return ts.isoformat(timespec="seconds")
+
+
 def read_json(arg: str | Path) -> Any:
     if using_s3():
         return json.loads(_get(_to_key(arg)))
