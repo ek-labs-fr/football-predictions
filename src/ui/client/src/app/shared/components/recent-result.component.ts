@@ -29,11 +29,11 @@ import { TeamCrestComponent } from './team-crest.component';
         <div class="left">
           <div class="row">
             <span class="lbl">ACTUAL</span>
-            <span class="value">[{{ actualParts().home }}]-[{{ actualParts().away }}]</span>
+            <span class="value">{{ actualParts().home }}-{{ actualParts().away }}</span>
           </div>
           <div class="row">
             <span class="lbl predicted-lbl">PREDICTED</span>
-            <span class="value">[{{ predictedParts().home }}]-[{{ predictedParts().away }}]</span>
+            <span class="value">{{ predictedParts().home }}-{{ predictedParts().away }}</span>
           </div>
         </div>
         <div class="gauge">
