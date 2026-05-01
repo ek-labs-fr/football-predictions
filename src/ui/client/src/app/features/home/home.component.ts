@@ -48,10 +48,7 @@ const DEFAULT_LEAGUE = 'premier-league';
         <p class="error">{{ errorMsg() }}</p>
       } @else if (selectedCompetition(); as comp) {
         <section class="block">
-          <h2 class="section-title">
-            ACTIVE PREDICTIONS:
-            <span class="league-name">{{ upperLeagueName(comp) }}</span>
-          </h2>
+          <h2 class="section-title">UPCOMING FIXTURES</h2>
           @if (loadingUpcoming()) {
             <div class="grid">
               @for (_ of [0,1,2,3,4,5]; track $index) {
@@ -159,7 +156,6 @@ const DEFAULT_LEAGUE = 'premier-league';
       color: var(--ericfc-navy);
       text-transform: uppercase;
     }
-    .section-title .league-name { color: var(--ericfc-navy); }
     .grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -263,11 +259,6 @@ private readonly upcomingCache = new Map<string, UpcomingResponse['matches']>();
     this.selectedId.set(id);
     this.writeStoredLeague(id);
     this.loadLeague(id);
-  }
-
-  upperLeagueName(c: Competition): string {
-    if (c.id === 'wc-2026') return '2026 WORLD CUP';
-    return c.name.toUpperCase();
   }
 
   private loadLeague(id: string): void {
