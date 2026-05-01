@@ -173,10 +173,7 @@ football-predictions-national/
 
 | Document | Contents |
 |---|---|
-| `documents/api-football-guide.md` | API-Football v3 endpoint reference, auth, national teams, rate limits |
-| `documents/worldcup-ml-data-pipeline.md` | Data pull sequence, feature list, flat row schema, rate limit strategy |
-| `documents/worldcup-ml-models-evaluation.md` | Model candidates, evaluation strategy, SHAP explainability, feature selection |
-| `documents/aws-architecture.md` | AWS services, CDK stacks, deployment flow, cost management |
-| `documents/ui-guide.md` | Angular components, services, Node.js BFF, page routes, design principles |
-| `documents/testing-and-security.md` | Unit/integration/e2e testing, dependency scanning, SAST, container scanning, secrets detection, CI gates |
-| `documents/action-plan.md` | Step-by-step implementation plan for data ingestion, feature engineering, and model development |
+| `documents/technical-architecture.md` | End-to-end system architecture across data ingestion, processing, model training, inference, MLOps, and front-end. Includes Mermaid diagrams and tech-choice justifications. |
+| `documents/model-card.md` | Senior-DS model assessment: feature catalog with leakage guards, top-10 SHAP values, evaluation metrics vs benchmarks, and known limitations. |
+
+Additional internal-only references live in `documents/` but are not tracked in git (see `.gitignore`).
