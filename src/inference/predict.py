@@ -17,6 +17,13 @@ Outputs go to S3 (when DATA_BUCKET is set) under:
     web/data/past_<competition>.json
     predictions/<fixture_id>.json   ← immutable per-fixture frozen predictions
 
+PUBLIC-DATA CONSTRAINT: anything written under web/data/* is served publicly
+via Cloudflare Pages (ericfc.com) — the S3 bucket policy grants public-read on
+that prefix only. Only include fields that are safe to expose to anyone on the
+internet. Sensitive fields (raw API tokens, PII, internal-only metrics) must
+go under a different prefix — predictions/<fid>.json and the rest of the bucket
+remain private.
+
 The legacy combined CSV/Parquet files (predictions_{national_wc2026,club})
 are still emitted for debugging.
 """
