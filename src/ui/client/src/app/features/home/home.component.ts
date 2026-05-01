@@ -13,7 +13,7 @@ import { RecentResultComponent } from '../../shared/components/recent-result.com
 import { CardSkeletonComponent } from '../../shared/components/card-skeleton.component';
 
 const STORAGE_KEY = 'ericfc.selectedLeague';
-const DEFAULT_LEAGUE = 'wc-2026';
+const DEFAULT_LEAGUE = 'premier-league';
 
 @Component({
   selector: 'app-home',
