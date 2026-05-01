@@ -71,11 +71,19 @@ class IngestStack(Stack):
         super().__init__(scope, id, **kwargs)
 
         # --- S3 raw data bucket ------------------------------------------------
+        # ACL-based public access stays blocked. Bucket-policy-based public
+        # access is allowed because Cloudflare Pages reads dashboard JSONs
+        # under web/data/* via a public-read statement added below.
         data_bucket = s3.Bucket(
             self,
             "DataBucket",
             bucket_name=data_bucket_name,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            block_public_access=s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=False,
+                restrict_public_buckets=False,
+            ),
             encryption=s3.BucketEncryption.S3_MANAGED,
             versioned=True,
             enforce_ssl=True,
@@ -94,6 +102,20 @@ class IngestStack(Stack):
                     ],
                 )
             ],
+        )
+
+        # Cloudflare Pages serves https://ericfc.com/data/* by proxying to this
+        # prefix. Anything under web/data/* must be safe to expose publicly —
+        # see src/inference/predict.py for the matching constraint at the
+        # write site.
+        data_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="PublicReadWebData",
+                effect=iam.Effect.ALLOW,
+                principals=[iam.AnyPrincipal()],
+                actions=["s3:GetObject"],
+                resources=[f"{data_bucket.bucket_arn}/web/data/*"],
+            ),
         )
 
         # --- API-Football key from Secrets Manager ----------------------------
