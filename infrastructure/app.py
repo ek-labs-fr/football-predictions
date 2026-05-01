@@ -12,7 +12,6 @@ import os
 import aws_cdk as cdk
 from stacks.cicd_stack import CICDStack
 from stacks.feature_stack import FeatureStack
-from stacks.hosting_stack import HostingStack
 from stacks.inference_stack import InferenceStack
 from stacks.ingest_stack import IngestStack
 from stacks.observability_stack import ObservabilityStack
@@ -47,13 +46,6 @@ InferenceStack(
     env=env,
     data_bucket_name=ingest.data_bucket.bucket_name,
     feature_function_arn=features.feature_function.function_arn,
-)
-
-HostingStack(
-    app,
-    "FPHostingStack",
-    env=env,
-    data_bucket_name=ingest.data_bucket.bucket_name,
 )
 
 ObservabilityStack(
