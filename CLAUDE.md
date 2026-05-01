@@ -39,7 +39,7 @@ The system predicts **expected goals per team** (home λ, away λ) using indepen
 ```
 football-predictions-national/
 ├── CLAUDE.md
-├── Documents/                  # Reference docs (see list below)
+├── documents/                  # Reference docs (see list below)
 │
 ├── src/
 │   ├── data/                   # Data pipeline
@@ -173,10 +173,10 @@ football-predictions-national/
 
 | Document | Contents |
 |---|---|
-| `Documents/api-football-guide.md` | API-Football v3 endpoint reference, auth, national teams, rate limits |
-| `Documents/worldcup-ml-data-pipeline.md` | Data pull sequence, feature list, flat row schema, rate limit strategy |
-| `Documents/worldcup-ml-models-evaluation.md` | Model candidates, evaluation strategy, SHAP explainability, feature selection |
-| `Documents/aws-architecture.md` | AWS services, CDK stacks, deployment flow, cost management |
-| `Documents/ui-guide.md` | Angular components, services, Node.js BFF, page routes, design principles |
-| `Documents/testing-and-security.md` | Unit/integration/e2e testing, dependency scanning, SAST, container scanning, secrets detection, CI gates |
-| `Documents/action-plan.md` | Step-by-step implementation plan for data ingestion, feature engineering, and model development |
+| `documents/api-football-guide.md` | API-Football v3 endpoint reference, auth, national teams, rate limits |
+| `documents/worldcup-ml-data-pipeline.md` | Data pull sequence, feature list, flat row schema, rate limit strategy |
+| `documents/worldcup-ml-models-evaluation.md` | Model candidates, evaluation strategy, SHAP explainability, feature selection |
+| `documents/aws-architecture.md` | AWS services, CDK stacks, deployment flow, cost management |
+| `documents/ui-guide.md` | Angular components, services, Node.js BFF, page routes, design principles |
+| `documents/testing-and-security.md` | Unit/integration/e2e testing, dependency scanning, SAST, container scanning, secrets detection, CI gates |
+| `documents/action-plan.md` | Step-by-step implementation plan for data ingestion, feature engineering, and model development |
