@@ -69,4 +69,5 @@ predictions/
 # Internal docs — kept locally, only the curated set is exposed on GitHub
 documents/**
 !documents/technical-architecture.md
-!documents/model-card.md
+!documents/model-card-national.md
+!documents/model-card-clubs.md

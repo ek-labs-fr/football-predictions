@@ -174,6 +174,7 @@ football-predictions-national/
 | Document | Contents |
 |---|---|
 | `documents/technical-architecture.md` | End-to-end system architecture across data ingestion, processing, model training, inference, MLOps, and front-end. Includes Mermaid diagrams and tech-choice justifications. |
-| `documents/model-card.md` | Senior-DS model assessment: feature catalog with leakage guards, top-10 SHAP values, evaluation metrics vs benchmarks, and known limitations. |
+| `documents/model-card-national.md` | Senior-DS model assessment for national-team mode (WC 2022 holdout, LightGBM Poisson, ρ=−0.106, elo_diff dominates). |
+| `documents/model-card-clubs.md` | Senior-DS model assessment for club mode (most-recent-season holdout, Poisson Linear surprisingly wins, ρ=+0.042, squad features dominate). |
 
 Additional internal-only references live in `documents/` but are not tracked in git (see `.gitignore`).
