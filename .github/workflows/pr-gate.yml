@@ -78,10 +78,12 @@ jobs:
 
   ui-build:
     # NOTE: Angular ESLint isn't configured (no .eslintrc, no `lint` script in
-    # package.json), so this job currently only builds. To enable linting,
-    # run `ng add @angular-eslint/schematics` in src/ui/client and add an
-    # `npx ng lint` step here.
-    name: UI (build)
+    # package.json), so this job currently only builds despite the name. To
+    # actually enable linting, run `ng add @angular-eslint/schematics` in
+    # src/ui/client and add an `npx ng lint` step here. The job name is kept
+    # as "UI (build + lint)" because the master branch-protection rule
+    # references it; renaming requires updating branch protection in tandem.
+    name: UI (build + lint)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
