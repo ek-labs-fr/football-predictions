@@ -631,7 +631,9 @@ def pull_odds(
         if (i + 1) % 200 == 0:
             logger.info(
                 "Odds progress: %d/%d fixtures (%d with data)",
-                i + 1, len(fixture_ids), len(rows),
+                i + 1,
+                len(fixture_ids),
+                len(rows),
             )
 
     df = pd.DataFrame(rows)
@@ -663,9 +665,7 @@ _STAT_KEYS = [
 ]
 
 
-def fetch_match_statistics(
-    client: APIFootballClient, fixture_id: int
-) -> list[FixtureStatistics]:
+def fetch_match_statistics(client: APIFootballClient, fixture_id: int) -> list[FixtureStatistics]:
     """Fetch per-team match statistics for a single fixture."""
     data = client.get("/fixtures/statistics", {"fixture": fixture_id})
     return [FixtureStatistics.model_validate(item) for item in data.get("response", [])]
@@ -734,7 +734,9 @@ def pull_match_statistics(
         if (i + 1) % 200 == 0:
             logger.info(
                 "Match stats progress: %d/%d fixtures (%d with data)",
-                i + 1, len(fixture_ids), len(rows),
+                i + 1,
+                len(fixture_ids),
+                len(rows),
             )
 
     df = pd.DataFrame(rows)
@@ -809,7 +811,10 @@ def build_club_match_statistics_from_cache(
     df.to_csv(output_path, index=False)
     logger.info(
         "Built club match-stats CSV: %d rows from %d files (skipped=%d) -> %s",
-        len(df), len(files), skipped, output_path,
+        len(df),
+        len(files),
+        skipped,
+        output_path,
     )
     if not df.empty:
         xg_cov = df["home_xg"].notna().mean() if "home_xg" in df.columns else 0.0
@@ -897,7 +902,9 @@ def pull_injuries(
         if (i + 1) % 200 == 0:
             logger.info(
                 "Injuries progress: %d/%d fixtures (%d rows)",
-                i + 1, len(fixture_ids), len(rows),
+                i + 1,
+                len(fixture_ids),
+                len(rows),
             )
 
     df = pd.DataFrame(rows)

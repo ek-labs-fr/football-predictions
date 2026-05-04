@@ -122,17 +122,13 @@ def main() -> None:
         national = _apply_national_filter(national)
         upcoming = int(national["outcome"].isna().sum())
         national.to_csv(PROCESSED_DIR / "all_fixtures.csv", index=False)
-        logger.info(
-            "Wrote all_fixtures.csv — %d fixtures (%d upcoming)", len(national), upcoming
-        )
+        logger.info("Wrote all_fixtures.csv — %d fixtures (%d upcoming)", len(national), upcoming)
 
     if not args.national_only:
         club = _load_domain("club")
         upcoming = int(club["outcome"].isna().sum())
         club.to_csv(PROCESSED_DIR / "all_fixtures_club.csv", index=False)
-        logger.info(
-            "Wrote all_fixtures_club.csv — %d fixtures (%d upcoming)", len(club), upcoming
-        )
+        logger.info("Wrote all_fixtures_club.csv — %d fixtures (%d upcoming)", len(club), upcoming)
 
 
 if __name__ == "__main__":

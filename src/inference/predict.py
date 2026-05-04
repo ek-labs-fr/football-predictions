@@ -141,7 +141,11 @@ _OUTCOMES = ("home_win", "draw", "away_win")
 
 
 def _modal_scoreline(
-    mat: np.ndarray, p_h: float, p_d: float, p_a: float, rule: str,
+    mat: np.ndarray,
+    p_h: float,
+    p_d: float,
+    p_a: float,
+    rule: str,
 ) -> tuple[int, int]:
     """Pick a scoreline from the bivariate Poisson matrix under the named rule.
 
@@ -155,11 +159,11 @@ def _modal_scoreline(
         target = mat
     elif rule == "outcome_conditional_v0":
         outcome_idx = int(np.argmax([p_h, p_d, p_a]))
-        if outcome_idx == 0:        # home win → strictly lower triangle
+        if outcome_idx == 0:  # home win → strictly lower triangle
             target = np.tril(mat, -1)
-        elif outcome_idx == 1:      # draw → diagonal only
+        elif outcome_idx == 1:  # draw → diagonal only
             target = np.diag(np.diag(mat))
-        else:                        # away win → strictly upper triangle
+        else:  # away win → strictly upper triangle
             target = np.triu(mat, 1)
     else:
         raise ValueError(f"unknown decision rule: {rule!r}")
@@ -222,8 +226,13 @@ def _predict_rows(
 
 
 _PREDICTION_FIELDS = (
-    "lambda_home", "lambda_away", "predicted_score",
-    "p_home_win", "p_draw", "p_away_win", "predicted_outcome",
+    "lambda_home",
+    "lambda_away",
+    "predicted_score",
+    "p_home_win",
+    "p_draw",
+    "p_away_win",
+    "predicted_outcome",
 )
 
 
@@ -296,11 +305,18 @@ def _materialise_predictions(
 
     if not new_rows.empty:
         predicted = _predict_rows(
-            new_rows, feature_cols, medians, model_home, model_away, scaler, rho,
+            new_rows,
+            feature_cols,
+            medians,
+            model_home,
+            model_away,
+            scaler,
+            rho,
         )
         for _, p in predicted.iterrows():
             _store_prediction(
-                int(p["fixture_id"]), p,
+                int(p["fixture_id"]),
+                p,
                 backfill=backfill,
                 model_trained_at=model_trained_at,
             )
@@ -333,19 +349,37 @@ def predict_upcoming(mode: str) -> pd.DataFrame:
     inf = io.read_parquet(cfg.inference_table)
 
     out = _materialise_predictions(
-        inf, feature_cols, medians, model_home, model_away, scaler, rho,
+        inf,
+        feature_cols,
+        medians,
+        model_home,
+        model_away,
+        scaler,
+        rho,
         backfill=False,
         model_trained_at=trained_at,
     )
     out = out.sort_values("date").reset_index(drop=True)
 
     legacy = out[
-        [c for c in [
-            "fixture_id", "date", "league_id", "round",
-            "home_team_name", "away_team_name",
-            "lambda_home", "lambda_away", "predicted_score",
-            "p_home_win", "p_draw", "p_away_win",
-        ] if c in out.columns]
+        [
+            c
+            for c in [
+                "fixture_id",
+                "date",
+                "league_id",
+                "round",
+                "home_team_name",
+                "away_team_name",
+                "lambda_home",
+                "lambda_away",
+                "predicted_score",
+                "p_home_win",
+                "p_draw",
+                "p_away_win",
+            ]
+            if c in out.columns
+        ]
     ].rename(columns={"predicted_score": "most_likely_score"})
     io.write_csv(cfg.legacy_csv, legacy)
     io.write_parquet(cfg.legacy_parquet, legacy)
@@ -362,8 +396,7 @@ def predict_recent(mode: str, days: int = _RECENT_WINDOW_DAYS) -> pd.DataFrame:
 
     cutoff = datetime.now(UTC) - timedelta(days=days)
     recent = train_df[
-        (train_df["status"].isin(_FINISHED_STATUSES))
-        & (train_df["date"] >= pd.Timestamp(cutoff))
+        (train_df["status"].isin(_FINISHED_STATUSES)) & (train_df["date"] >= pd.Timestamp(cutoff))
     ].copy()
 
     if recent.empty:
@@ -372,7 +405,13 @@ def predict_recent(mode: str, days: int = _RECENT_WINDOW_DAYS) -> pd.DataFrame:
 
     model_home, model_away, scaler, rho, trained_at = _load_artefacts(cfg.artefacts_prefix)
     out = _materialise_predictions(
-        recent, feature_cols, medians, model_home, model_away, scaler, rho,
+        recent,
+        feature_cols,
+        medians,
+        model_home,
+        model_away,
+        scaler,
+        rho,
         backfill=True,
         model_trained_at=trained_at,
     )
@@ -383,9 +422,12 @@ def predict_recent(mode: str, days: int = _RECENT_WINDOW_DAYS) -> pd.DataFrame:
         out["actual_home_goals"].astype(str) + "-" + out["actual_away_goals"].astype(str)
     )
     out["actual_outcome"] = np.where(
-        out["actual_home_goals"] > out["actual_away_goals"], "home_win",
+        out["actual_home_goals"] > out["actual_away_goals"],
+        "home_win",
         np.where(
-            out["actual_home_goals"] < out["actual_away_goals"], "away_win", "draw",
+            out["actual_home_goals"] < out["actual_away_goals"],
+            "away_win",
+            "draw",
         ),
     )
     out["correct_outcome"] = out["predicted_outcome"] == out["actual_outcome"]
@@ -407,7 +449,13 @@ def predict_holdout(mode: str, decision_rule: str = _DECISION_RULE_VERSION) -> p
 
     model_home, model_away, scaler, rho, _trained_at = _load_artefacts(cfg.artefacts_prefix)
     out = _predict_rows(
-        holdout, feature_cols, medians, model_home, model_away, scaler, rho,
+        holdout,
+        feature_cols,
+        medians,
+        model_home,
+        model_away,
+        scaler,
+        rho,
         decision_rule=decision_rule,
     )
 
@@ -417,9 +465,12 @@ def predict_holdout(mode: str, decision_rule: str = _DECISION_RULE_VERSION) -> p
         out["actual_home_goals"].astype(str) + "-" + out["actual_away_goals"].astype(str)
     )
     out["actual_outcome"] = np.where(
-        out["actual_home_goals"] > out["actual_away_goals"], "home_win",
+        out["actual_home_goals"] > out["actual_away_goals"],
+        "home_win",
         np.where(
-            out["actual_home_goals"] < out["actual_away_goals"], "away_win", "draw",
+            out["actual_home_goals"] < out["actual_away_goals"],
+            "away_win",
+            "draw",
         ),
     )
     out["correct_outcome"] = out["predicted_outcome"] == out["actual_outcome"]
@@ -436,20 +487,31 @@ def predict_holdout(mode: str, decision_rule: str = _DECISION_RULE_VERSION) -> p
 
 
 _UPCOMING_COLS = [
-    "fixture_id", "date", "round",
+    "fixture_id",
+    "date",
+    "round",
     "league_id",
-    "home_team_id", "home_team_name",
-    "away_team_id", "away_team_name",
+    "home_team_id",
+    "home_team_name",
+    "away_team_id",
+    "away_team_name",
     "predicted_score",
-    "lambda_home", "lambda_away",
-    "p_home_win", "p_draw", "p_away_win",
+    "lambda_home",
+    "lambda_away",
+    "p_home_win",
+    "p_draw",
+    "p_away_win",
     "predicted_outcome",
     "prediction_made_at",
 ]
 
 _PAST_EXTRA_COLS = [
-    "actual_home_goals", "actual_away_goals", "actual_score",
-    "actual_outcome", "correct_outcome", "correct_score",
+    "actual_home_goals",
+    "actual_away_goals",
+    "actual_score",
+    "actual_outcome",
+    "correct_outcome",
+    "correct_score",
 ]
 
 
@@ -534,25 +596,29 @@ def publish_dashboard_json() -> dict[str, object]:
         io.write_json(f"web/data/recent_{comp.id}.json", recent_payload)
         io.write_json(f"web/data/past_{comp.id}.json", past_payload)
 
-        manifest.append({
-            "id": comp.id,
-            "name": comp.name,
-            "mode": comp.mode,
-            "league_id": comp.league_id,
-            "past_label": comp.past_label,
-            "recent_window_days": _RECENT_WINDOW_DAYS,
-            "upcoming_count": len(upcoming_payload["matches"]),
-            "recent_count": len(recent_payload["matches"]),
-            "past_count": len(past_payload["matches"]),
-        })
-        summary["competitions"].append({
-            "id": comp.id,
-            "upcoming": len(upcoming_payload["matches"]),
-            "recent": len(recent_payload["matches"]),
-            "past": len(past_payload["matches"]),
-            "recent_outcome_accuracy": recent_payload["performance"]["outcome_accuracy"],
-            "holdout_outcome_accuracy": past_payload["performance"]["outcome_accuracy"],
-        })
+        manifest.append(
+            {
+                "id": comp.id,
+                "name": comp.name,
+                "mode": comp.mode,
+                "league_id": comp.league_id,
+                "past_label": comp.past_label,
+                "recent_window_days": _RECENT_WINDOW_DAYS,
+                "upcoming_count": len(upcoming_payload["matches"]),
+                "recent_count": len(recent_payload["matches"]),
+                "past_count": len(past_payload["matches"]),
+            }
+        )
+        summary["competitions"].append(
+            {
+                "id": comp.id,
+                "upcoming": len(upcoming_payload["matches"]),
+                "recent": len(recent_payload["matches"]),
+                "past": len(past_payload["matches"]),
+                "recent_outcome_accuracy": recent_payload["performance"]["outcome_accuracy"],
+                "holdout_outcome_accuracy": past_payload["performance"]["outcome_accuracy"],
+            }
+        )
 
     io.write_json("web/data/competitions.json", manifest)
     logger.info("Published dashboard JSON for %d competitions", len(manifest))

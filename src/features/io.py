@@ -85,6 +85,7 @@ def last_modified(arg: str | Path) -> str | None:
     artefacts that produced them.
     """
     from datetime import UTC, datetime
+
     if using_s3():
         try:
             head = _client().head_object(Bucket=_bucket(), Key=_to_key(arg))

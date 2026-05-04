@@ -156,6 +156,10 @@ def rebuild_fixtures_csv(domain: str) -> int:
     statuses = df["status"].value_counts(dropna=False).to_dict()
     logger.info(
         "[%s] rebuilt %s — %d fixtures from %d source files; statuses=%s",
-        domain, output_key, len(df), len(keys), statuses,
+        domain,
+        output_key,
+        len(df),
+        len(keys),
+        statuses,
     )
     return len(df)

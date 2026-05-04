@@ -37,20 +37,24 @@ def _team_xg_history(fixtures: pd.DataFrame, match_stats: pd.DataFrame) -> pd.Da
     stats = match_stats[[c for c in keep if c in match_stats.columns]].copy()
     fx = fx.merge(stats, on="fixture_id", how="left")
 
-    home = pd.DataFrame({
-        "fixture_id": fx["fixture_id"],
-        "date": fx["date"],
-        "team_id": fx["home_team_id"],
-        "xg_for": fx.get("home_xg"),
-        "xg_against": fx.get("away_xg"),
-    })
-    away = pd.DataFrame({
-        "fixture_id": fx["fixture_id"],
-        "date": fx["date"],
-        "team_id": fx["away_team_id"],
-        "xg_for": fx.get("away_xg"),
-        "xg_against": fx.get("home_xg"),
-    })
+    home = pd.DataFrame(
+        {
+            "fixture_id": fx["fixture_id"],
+            "date": fx["date"],
+            "team_id": fx["home_team_id"],
+            "xg_for": fx.get("home_xg"),
+            "xg_against": fx.get("away_xg"),
+        }
+    )
+    away = pd.DataFrame(
+        {
+            "fixture_id": fx["fixture_id"],
+            "date": fx["date"],
+            "team_id": fx["away_team_id"],
+            "xg_for": fx.get("away_xg"),
+            "xg_against": fx.get("home_xg"),
+        }
+    )
     history = pd.concat([home, away], ignore_index=True)
     return history.sort_values(["team_id", "date"]).reset_index(drop=True)
 
@@ -75,9 +79,14 @@ def compute_xg_rolling_features(
             "Match-stats CSV not found at %s — writing empty xG-rolling output",
             match_stats_path,
         )
-        empty = pd.DataFrame(columns=[
-            "fixture_id", "team_id", "xg_for_avg_l10", "xg_against_avg_l10",
-        ])
+        empty = pd.DataFrame(
+            columns=[
+                "fixture_id",
+                "team_id",
+                "xg_for_avg_l10",
+                "xg_against_avg_l10",
+            ]
+        )
         io.write_csv(output_path, empty)
         return empty
 
@@ -90,14 +99,21 @@ def compute_xg_rolling_features(
         _rolling_prior,
     )
 
-    out = history[[
-        "fixture_id", "team_id", "xg_for_avg_l10", "xg_against_avg_l10",
-    ]].copy()
+    out = history[
+        [
+            "fixture_id",
+            "team_id",
+            "xg_for_avg_l10",
+            "xg_against_avg_l10",
+        ]
+    ].copy()
 
     coverage = out["xg_for_avg_l10"].notna().mean() if len(out) else 0.0
     io.write_csv(output_path, out)
     logger.info(
         "xG rolling features: %d (fixture, team) rows -> %s (coverage %.1f%%)",
-        len(out), output_path, coverage * 100,
+        len(out),
+        output_path,
+        coverage * 100,
     )
     return out

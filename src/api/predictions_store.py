@@ -210,12 +210,8 @@ class PredictionsStore:
         for tid in set(completed["home_team_id"]) | set(completed["away_team_id"]):
             home_rows = completed[completed["home_team_id"] == tid]
             away_rows = completed[completed["away_team_id"] == tid]
-            goals_scored = (
-                home_rows["home_goals"].sum() + away_rows["away_goals"].sum()
-            )
-            goals_conceded = (
-                home_rows["away_goals"].sum() + away_rows["home_goals"].sum()
-            )
+            goals_scored = home_rows["home_goals"].sum() + away_rows["away_goals"].sum()
+            goals_conceded = home_rows["away_goals"].sum() + away_rows["home_goals"].sum()
             n_matches = len(home_rows) + len(away_rows)
             if n_matches >= 3:
                 avg_global = (global_home_avg + global_away_avg) / 2

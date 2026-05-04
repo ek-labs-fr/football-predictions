@@ -58,7 +58,12 @@ def _pull_domain(
         counts[(league_id, season)] = len(fixtures)
         logger.info(
             "%s league=%d season=%d: %d fixtures in [%s, %s]",
-            domain, league_id, season, len(fixtures), date_from, date_to,
+            domain,
+            league_id,
+            season,
+            len(fixtures),
+            date_from,
+            date_to,
         )
 
     return counts
@@ -67,11 +72,17 @@ def _pull_domain(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--from", dest="date_from", type=_parse_date, default=date.today(),
+        "--from",
+        dest="date_from",
+        type=_parse_date,
+        default=date.today(),
         help="Window start (inclusive). Default: today.",
     )
     parser.add_argument(
-        "--to", dest="date_to", type=_parse_date, default=_parse_date("2026-07-31"),
+        "--to",
+        dest="date_to",
+        type=_parse_date,
+        default=_parse_date("2026-07-31"),
         help="Window end (inclusive). Default: 2026-07-31 (covers WC 2026 final).",
     )
     parser.add_argument("--club-only", action="store_true")

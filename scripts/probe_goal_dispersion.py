@@ -33,13 +33,14 @@ def main() -> None:
     # Per-side: actual vs lambda
     print("=== Per-side dispersion check ===")
     header = (
-        f"{'side':<8} {'mean':>7} {'std':>7} {'min':>6} "
-        f"{'q10':>6} {'q50':>6} {'q90':>6} {'max':>6}"
+        f"{'side':<8} {'mean':>7} {'std':>7} {'min':>6} {'q10':>6} {'q50':>6} {'q90':>6} {'max':>6}"
     )
     print(header)
     for label, vals in [
-        ("home act", actual_h), ("home lam", lam_h),
-        ("away act", actual_a), ("away lam", lam_a),
+        ("home act", actual_h),
+        ("home lam", lam_h),
+        ("away act", actual_a),
+        ("away lam", lam_a),
     ]:
         q = np.quantile(vals, [0.10, 0.50, 0.90])
         print(
@@ -63,8 +64,7 @@ def main() -> None:
             pred_a = float((1 - poisson.cdf(k - 1, lam_a)).mean())
         label = f"{k}+" if k == 6 else str(k)
         print(
-            f"{label:>5} {act_h_share:>9.1%} {pred_h:>10.1%} "
-            f"{act_a_share:>9.1%} {pred_a:>10.1%}",
+            f"{label:>5} {act_h_share:>9.1%} {pred_h:>10.1%} {act_a_share:>9.1%} {pred_a:>10.1%}",
         )
 
     # How often is lambda >= 2 (a fixture where the model "expects" 2+ goals)?
