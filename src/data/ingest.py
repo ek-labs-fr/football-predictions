@@ -748,6 +748,75 @@ def pull_match_statistics(
     return df
 
 
+def build_club_match_statistics_from_cache(
+    cache_dir: Path = Path("data/raw/club/fixtures_statistics"),
+    output_path: Path = PROCESSED_DIR / "match_statistics_club.csv",
+) -> pd.DataFrame:
+    """Parse cached /fixtures/statistics responses into a flat club CSV.
+
+    Mirrors the columns produced by ``pull_match_statistics`` but reads from the
+    local raw cache instead of hitting the API. Run after raw responses have
+    been fetched (via ``bootstrap_data.py`` or ``catchup_fixtures.py``).
+
+    xG (``home_xg`` / ``away_xg``) is only present from 2023 onward in
+    API-Football's coverage of PL / La Liga / Ligue 1; older fixtures have
+    NaN.
+    """
+    files = sorted(cache_dir.glob("*.json"))
+    if not files:
+        logger.warning("No cached statistics files in %s", cache_dir)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        empty = pd.DataFrame()
+        empty.to_csv(output_path, index=False)
+        return empty
+
+    rows: list[dict[str, Any]] = []
+    skipped = 0
+    for f in files:
+        try:
+            with f.open(encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            skipped += 1
+            continue
+
+        params = data.get("parameters") or {}
+        fid_raw = params.get("fixture")
+        try:
+            fid = int(fid_raw) if fid_raw is not None else None
+        except (TypeError, ValueError):
+            fid = None
+        if fid is None:
+            skipped += 1
+            continue
+
+        response = data.get("response") or []
+        if len(response) < 2:
+            continue
+
+        try:
+            stats = [FixtureStatistics.model_validate(item) for item in response]
+        except Exception:  # noqa: BLE001 — validation errors are expected for partial responses
+            skipped += 1
+            continue
+
+        extracted = _extract_match_stat_row(fid, stats)
+        if extracted:
+            rows.append(extracted)
+
+    df = pd.DataFrame(rows).drop_duplicates(subset=["fixture_id"])
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, index=False)
+    logger.info(
+        "Built club match-stats CSV: %d rows from %d files (skipped=%d) -> %s",
+        len(df), len(files), skipped, output_path,
+    )
+    if not df.empty:
+        xg_cov = df["home_xg"].notna().mean() if "home_xg" in df.columns else 0.0
+        logger.info("Club match-stats xG coverage: %.1f%%", xg_cov * 100)
+    return df
+
+
 # ------------------------------------------------------------------
 # Step 1.12 — Injuries / Suspensions Pull
 # ------------------------------------------------------------------
