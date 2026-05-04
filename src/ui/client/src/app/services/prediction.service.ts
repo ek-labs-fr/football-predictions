@@ -21,6 +21,7 @@ export interface MatchPrediction {
   p_draw: number;
   p_away_win: number;
   predicted_outcome: Outcome;
+  rationale?: string;
   prediction_made_at?: string;
   actual_home_goals?: number;
   actual_away_goals?: number;
