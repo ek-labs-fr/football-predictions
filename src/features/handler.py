@@ -37,6 +37,7 @@ import logging
 import time
 from typing import Any
 
+from src.data.ingest import build_club_match_statistics_from_cache
 from src.features import io
 from src.features.build import (
     build_club_inference_table,
@@ -44,7 +45,6 @@ from src.features.build import (
     build_inference_table,
     build_training_table,
 )
-from src.data.ingest import build_club_match_statistics_from_cache
 from src.features.h2h import compute_h2h_features
 from src.features.rebuild import rebuild_fixtures_csv
 from src.features.rolling import compute_rolling_features

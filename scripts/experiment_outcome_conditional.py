@@ -16,12 +16,15 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
 
 from src.inference.predict import COMPETITIONS, _load_artefacts, predict_holdout
 from src.models.calibrate import _bivariate_poisson_matrix
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 logging.basicConfig(
     level=logging.INFO,
@@ -91,7 +94,9 @@ def main() -> None:
 
     # Sanity: λ and outcome predictions must be identical across rules.
     a, b = by_rule["argmax_v0"], by_rule["outcome_conditional_v0"]
-    if not (a["lambda_home"].equals(b["lambda_home"]) and a["lambda_away"].equals(b["lambda_away"])):
+    same_lh = a["lambda_home"].equals(b["lambda_home"])
+    same_la = a["lambda_away"].equals(b["lambda_away"])
+    if not (same_lh and same_la):
         raise RuntimeError("λ values diverged between rules — bug")
     if not a["predicted_outcome"].equals(b["predicted_outcome"]):
         raise RuntimeError("predicted_outcome diverged between rules — bug")

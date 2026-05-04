@@ -16,7 +16,7 @@ Usage:
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
+from scipy.stats import poisson
 
 from src.inference.predict import predict_holdout
 
@@ -32,7 +32,11 @@ def main() -> None:
 
     # Per-side: actual vs lambda
     print("=== Per-side dispersion check ===")
-    print(f"{'side':<8} {'mean':>7} {'std':>7} {'min':>6} {'q10':>6} {'q50':>6} {'q90':>6} {'max':>6}")
+    header = (
+        f"{'side':<8} {'mean':>7} {'std':>7} {'min':>6} "
+        f"{'q10':>6} {'q50':>6} {'q90':>6} {'max':>6}"
+    )
+    print(header)
     for label, vals in [
         ("home act", actual_h), ("home lam", lam_h),
         ("away act", actual_a), ("away lam", lam_a),
@@ -51,8 +55,6 @@ def main() -> None:
         act_h_share = float((actual_h == k).mean()) if k < 6 else float((actual_h >= k).mean())
         act_a_share = float((actual_a == k).mean()) if k < 6 else float((actual_a >= k).mean())
         # Predicted = mean over fixtures of Poisson PMF at k under each lambda
-        from scipy.stats import poisson
-
         if k < 6:
             pred_h = float(poisson.pmf(k, lam_h).mean())
             pred_a = float(poisson.pmf(k, lam_a).mean())
@@ -78,10 +80,12 @@ def main() -> None:
         )
 
     # How often does the joint Poisson actually concentrate above 1-goal cells?
-    n_high_lambda = int(((lam_h + lam_a) >= 3.5).sum())
-    print(f"\nFixtures with lambda_h + lambda_a >= 3.5:  {n_high_lambda} / {n} ({n_high_lambda / n:.1%})")
+    n_hi_lam = int(((lam_h + lam_a) >= 3.5).sum())
+    pct_hi_lam = n_hi_lam / n
+    print(f"\nFixtures with lambda_h + lambda_a >= 3.5:  {n_hi_lam} / {n} ({pct_hi_lam:.1%})")
     n_high_actual = int(((actual_h + actual_a) >= 4).sum())
-    print(f"Fixtures with actual goals  >= 4:           {n_high_actual} / {n} ({n_high_actual / n:.1%})")
+    pct_high_act = n_high_actual / n
+    print(f"Fixtures with actual goals  >= 4:           {n_high_actual} / {n} ({pct_high_act:.1%})")
 
 
 if __name__ == "__main__":

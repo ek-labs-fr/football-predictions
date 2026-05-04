@@ -14,13 +14,8 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from src.models.calibrate import _bivariate_poisson_matrix, fit_rho
-from src.models.train import (
-    _make_holdout_masks,
-    create_split,
-    get_feature_columns,
-    predict_lambdas,
-)
+from src.models.calibrate import _bivariate_poisson_matrix
+from src.models.train import _make_holdout_masks, get_feature_columns
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -50,12 +45,12 @@ def evaluate(label: str, table_path: str, artefacts: Path) -> dict:
     test_df = df[test_mask]
     feature_cols = get_feature_columns(df, mode="club")
     medians = train_df[feature_cols].median()
-    X_test = test_df[feature_cols].fillna(medians)
+    x_test = test_df[feature_cols].fillna(medians)
 
     home, away, scaler, rho = _load_artefact(artefacts)
-    X_input = scaler.transform(X_test) if scaler is not None else X_test.values
-    lh = np.clip(home.predict(X_input), 0.01, 10.0)
-    la = np.clip(away.predict(X_input), 0.01, 10.0)
+    x_input = scaler.transform(x_test) if scaler is not None else x_test.values
+    lh = np.clip(home.predict(x_input), 0.01, 10.0)
+    la = np.clip(away.predict(x_input), 0.01, 10.0)
 
     actual_h = test_df["home_goals"].astype(int).to_numpy()
     actual_a = test_df["away_goals"].astype(int).to_numpy()

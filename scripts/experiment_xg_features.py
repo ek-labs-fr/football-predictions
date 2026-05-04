@@ -123,8 +123,9 @@ def compute_xg_rolling(fixtures: pd.DataFrame, xg_df: pd.DataFrame) -> pd.DataFr
     def rolling_prior(s: pd.Series) -> pd.Series:
         return s.shift(1).rolling(_WINDOW, min_periods=_MIN_PRIORS).mean()
 
-    history["xg_for_avg_l10"] = history.groupby("team_id")["xg_for"].transform(rolling_prior)
-    history["xg_against_avg_l10"] = history.groupby("team_id")["xg_against"].transform(rolling_prior)
+    grouped = history.groupby("team_id")
+    history["xg_for_avg_l10"] = grouped["xg_for"].transform(rolling_prior)
+    history["xg_against_avg_l10"] = grouped["xg_against"].transform(rolling_prior)
 
     coverage = history["xg_for_avg_l10"].notna().mean()
     logger.info("Rolling xG coverage: %.1f%% of (team, match) rows", coverage * 100)

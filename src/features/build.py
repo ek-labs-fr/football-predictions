@@ -426,12 +426,9 @@ def _assemble_club_table(
 
     if xg_rolling_path is not None and io.exists(xg_rolling_path):
         xg_rolling = io.read_csv(xg_rolling_path)
-        home_xg = xg_rolling.rename(
-            columns={c: f"home_{c}" for c in xg_rolling.columns if c not in ("fixture_id", "team_id")}
-        )
-        away_xg = xg_rolling.rename(
-            columns={c: f"away_{c}" for c in xg_rolling.columns if c not in ("fixture_id", "team_id")}
-        )
+        xg_rename_keys = [c for c in xg_rolling.columns if c not in ("fixture_id", "team_id")]
+        home_xg = xg_rolling.rename(columns={c: f"home_{c}" for c in xg_rename_keys})
+        away_xg = xg_rolling.rename(columns={c: f"away_{c}" for c in xg_rename_keys})
         df = df.merge(
             home_xg,
             left_on=["fixture_id", "home_team_id"],
