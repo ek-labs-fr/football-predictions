@@ -32,6 +32,7 @@ def _load_artefact(d: Path):
     scaler_path = d / "model_final_scaler.pkl"
     scaler = joblib.load(scaler_path) if scaler_path.exists() else None
     import json
+
     rho = json.loads((d / "rho.json").read_text())["rho"]
     return home, away, scaler, float(rho)
 
@@ -65,11 +66,7 @@ def evaluate(label: str, table_path: str, artefacts: Path) -> dict:
         pd_ = float(np.trace(mat))
         pa = float(np.triu(mat, 1).sum())
         marg = int(np.argmax([ph, pd_, pa]))
-        actual_o = (
-            0 if actual_h[i] > actual_a[i]
-            else 1 if actual_h[i] == actual_a[i]
-            else 2
-        )
+        actual_o = 0 if actual_h[i] > actual_a[i] else 1 if actual_h[i] == actual_a[i] else 2
         correct_outcome.append(int(marg == actual_o))
 
     return {

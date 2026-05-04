@@ -96,9 +96,7 @@ def _plan_uploads(
                     fixture_ids.add(fid)
                     continue
                 # Detail file without a fixture param — archive instead.
-            uploads.append(
-                (path, f"{domain}/historical/{subname}/{path.name}")
-            )
+            uploads.append((path, f"{domain}/historical/{subname}/{path.name}"))
 
     # Also backfill root-level metadata files like leagues.json, teams.json
     for path in domain_root.glob("*.json"):
@@ -172,9 +170,7 @@ def main(bucket: str, workers: int, dry_run: bool) -> None:
         failures = 0
         done = 0
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = [
-                pool.submit(_upload_one, s3, bucket, src, key) for src, key in uploads
-            ]
+            futures = [pool.submit(_upload_one, s3, bucket, src, key) for src, key in uploads]
             for fut in as_completed(futures):
                 key, ok, err = fut.result()
                 done += 1
@@ -186,7 +182,10 @@ def main(bucket: str, workers: int, dry_run: bool) -> None:
 
         logger.info(
             "Domain=%s: uploaded %d/%d (failures=%d)",
-            domain, done - failures, len(uploads), failures,
+            domain,
+            done - failures,
+            len(uploads),
+            failures,
         )
         grand_uploads += done
         grand_failures += failures
@@ -201,7 +200,8 @@ def main(bucket: str, workers: int, dry_run: bool) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Backfill local raw cache into S3")
     parser.add_argument(
-        "--bucket", required=True,
+        "--bucket",
+        required=True,
         help="Target S3 bucket (from CDK output DataBucketName)",
     )
     parser.add_argument("--workers", type=int, default=20, help="Concurrent uploads")

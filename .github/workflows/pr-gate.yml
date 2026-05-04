@@ -36,6 +36,9 @@ jobs:
       - name: Lint with ruff
         run: uv run ruff check .
 
+      - name: Check formatting with ruff
+        run: uv run ruff format --check .
+
       - name: Run pytest
         run: uv run pytest --no-cov -q
 
@@ -74,7 +77,11 @@ jobs:
         run: uv run cdk synth --quiet
 
   ui-build:
-    name: UI (build + lint)
+    # NOTE: Angular ESLint isn't configured (no .eslintrc, no `lint` script in
+    # package.json), so this job currently only builds. To enable linting,
+    # run `ng add @angular-eslint/schematics` in src/ui/client and add an
+    # `npx ng lint` step here.
+    name: UI (build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

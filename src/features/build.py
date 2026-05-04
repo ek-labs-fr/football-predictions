@@ -306,8 +306,13 @@ def build_training_table(
 ) -> pd.DataFrame:
     """Completed fixtures joined with features + labels — the training set."""
     df = _assemble_national_table(
-        fixtures_path, rolling_path, squad_path, h2h_path,
-        tournament_path, rankings_path, elo_path,
+        fixtures_path,
+        rolling_path,
+        squad_path,
+        h2h_path,
+        tournament_path,
+        rankings_path,
+        elo_path,
     )
     df = df.dropna(subset=["home_goals", "away_goals", "outcome"])
 
@@ -336,8 +341,13 @@ def build_inference_table(
 ) -> pd.DataFrame:
     """Upcoming fixtures (outcome not yet known) with features joined — the serving set."""
     df = _assemble_national_table(
-        fixtures_path, rolling_path, squad_path, h2h_path,
-        tournament_path, rankings_path, elo_path,
+        fixtures_path,
+        rolling_path,
+        squad_path,
+        h2h_path,
+        tournament_path,
+        rankings_path,
+        elo_path,
     )
     df = _filter_upcoming(df)
 
@@ -362,12 +372,8 @@ def _add_rest_days(fixtures: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values("date").reset_index(drop=True)
 
     # One row per (team, match) with that team's date
-    home = df[["fixture_id", "date", "home_team_id"]].rename(
-        columns={"home_team_id": "team_id"}
-    )
-    away = df[["fixture_id", "date", "away_team_id"]].rename(
-        columns={"away_team_id": "team_id"}
-    )
+    home = df[["fixture_id", "date", "home_team_id"]].rename(columns={"home_team_id": "team_id"})
+    away = df[["fixture_id", "date", "away_team_id"]].rename(columns={"away_team_id": "team_id"})
     long = pd.concat([home, away], ignore_index=True).sort_values(["team_id", "date"])
     long["prev_date"] = long.groupby("team_id")["date"].shift(1)
     long["rest_days"] = (long["date"] - long["prev_date"]).dt.total_seconds() / 86400.0
@@ -502,7 +508,11 @@ def build_club_training_table(
     stage features, and home advantage is real (not a neutral venue).
     """
     df = _assemble_club_table(
-        fixtures_path, rolling_path, squad_path, h2h_path, xg_rolling_path,
+        fixtures_path,
+        rolling_path,
+        squad_path,
+        h2h_path,
+        xg_rolling_path,
     )
     df = df.dropna(subset=["home_goals", "away_goals", "outcome"])
 
@@ -524,7 +534,11 @@ def build_club_inference_table(
 ) -> pd.DataFrame:
     """Upcoming club fixtures with features joined — the serving set."""
     df = _assemble_club_table(
-        fixtures_path, rolling_path, squad_path, h2h_path, xg_rolling_path,
+        fixtures_path,
+        rolling_path,
+        squad_path,
+        h2h_path,
+        xg_rolling_path,
     )
     df = _filter_upcoming(df)
 

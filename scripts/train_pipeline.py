@@ -70,12 +70,15 @@ def _append_history(
     best_model_name: str | None,
     history_path: Path = _HISTORY_PATH,
 ) -> None:
-    sha = subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"],
-        capture_output=True,
-        text=True,
-        check=False,
-    ).stdout.strip() or "unknown"
+    sha = (
+        subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
+        or "unknown"
+    )
 
     row = comparison.copy()
     row.insert(0, "timestamp", datetime.now(UTC).isoformat(timespec="seconds"))
@@ -133,10 +136,15 @@ def main(mode: str, skip_features: bool = False, skip_shap: bool = False) -> Non
     poisson_models = [m for m in all_models if m.is_poisson and m.model_home is not None]
     best_model: TrainedModel | None = None
     if poisson_models:
-        best_name = comparison.loc[
-            comparison["model"].isin([m.name for m in poisson_models]),
-            ["model", "mae_avg"],
-        ].dropna().sort_values("mae_avg").iloc[0]["model"]
+        best_name = (
+            comparison.loc[
+                comparison["model"].isin([m.name for m in poisson_models]),
+                ["model", "mae_avg"],
+            ]
+            .dropna()
+            .sort_values("mae_avg")
+            .iloc[0]["model"]
+        )
         best_model = next(m for m in poisson_models if m.name == best_name)
 
     _append_history(comparison, mode, best_model.name if best_model else None)

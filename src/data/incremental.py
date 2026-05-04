@@ -38,18 +38,18 @@ logger = logging.getLogger(__name__)
 
 # (league_id, season) pairs to sync every day
 CLUB_LEAGUE_SEASONS: list[tuple[int, int]] = [
-    (39, 2025),   # Premier League
-    (61, 2025),   # Ligue 1
+    (39, 2025),  # Premier League
+    (61, 2025),  # Ligue 1
     (140, 2025),  # La Liga
 ]
 
 # National competitions — same 8 leagues used for model training. Season
 # values cover the ongoing 2025-2026 tournament calendar.
 NATIONAL_LEAGUE_SEASONS: list[tuple[int, int]] = [
-    (1, 2026),   # World Cup 2026
-    (4, 2024),   # EURO 2024 (tail end of post-tournament reporting)
-    (5, 2024),   # Nations League 2024-25
-    (9, 2024),   # Copa America 2024
+    (1, 2026),  # World Cup 2026
+    (4, 2024),  # EURO 2024 (tail end of post-tournament reporting)
+    (5, 2024),  # Nations League 2024-25
+    (9, 2024),  # Copa America 2024
     (10, 2023),  # Asian Cup 2023
     (11, 2026),  # Friendlies 2026
 ]
@@ -155,13 +155,13 @@ def fetch_fixtures_window(
         }
         logger.info(
             "Fetching fixtures %s season=%d from=%s to=%s",
-            league_id, season, date_from, date_to,
+            league_id,
+            season,
+            date_from,
+            date_to,
         )
         payload = client.get("/fixtures", params)
-        key = (
-            f"{domain}/fixtures/{run_date.isoformat()}/"
-            f"league={league_id}-season={season}.json"
-        )
+        key = f"{domain}/fixtures/{run_date.isoformat()}/league={league_id}-season={season}.json"
         _put_json(s3, bucket, key, payload)
 
         for item in payload.get("response", []):

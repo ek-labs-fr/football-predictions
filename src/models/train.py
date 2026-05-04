@@ -139,9 +139,7 @@ def get_feature_columns(df: pd.DataFrame, mode: str = "national") -> list[str]:
     return [c for c in numeric if c not in excluded]
 
 
-def _make_holdout_masks(
-    df: pd.DataFrame, mode: str
-) -> tuple[pd.Series, pd.Series]:
+def _make_holdout_masks(df: pd.DataFrame, mode: str) -> tuple[pd.Series, pd.Series]:
     """Return (train_mask, test_mask) for the given mode."""
     if mode == "national":
         test_mask = (df["league_id"] == WC_2022_LEAGUE_ID) & (df["season"] == WC_2022_SEASON)

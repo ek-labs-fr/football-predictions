@@ -100,25 +100,25 @@ def _fallback_key(p: dict[str, Any]) -> str:
 # endpoint_subdir → (s3_prefix_under_domain, key_fn)
 _S3_KEY_RULES: dict[str, tuple[str, KeyFn]] = {
     # Per-fixture detail endpoints
-    "fixtures_events":     ("fixtures_events",     _fixture_key),
+    "fixtures_events": ("fixtures_events", _fixture_key),
     "fixtures_statistics": ("fixtures_statistics", _fixture_key),
-    "fixtures_lineups":    ("fixtures_lineups",    _fixture_key),
-    "odds":                ("odds",                _fixture_key),
-    "injuries":            ("injuries",            _fixture_key),
+    "fixtures_lineups": ("fixtures_lineups", _fixture_key),
+    "odds": ("odds", _fixture_key),
+    "injuries": ("injuries", _fixture_key),
     # H2H is keyed by the team-pair, not a fixture
     "fixtures_headtohead": ("fixtures_headtohead", _h2h_key),
     # Fixture lists — historical snapshots under a separate subprefix
-    "fixtures":            ("fixtures",            _fixtures_list_key),
+    "fixtures": ("fixtures", _fixtures_list_key),
     # Reference endpoints
-    "teams":               ("teams",               _league_season_key),
-    "standings":           ("standings",           _league_season_key),
-    "teams_statistics":    ("teams_statistics",    _league_season_team_key),
-    "players":             ("players",             _players_key),
-    "players_squads":      ("players_squads",      _team_key),
-    "coachs":              ("coachs",              _team_key),
-    "transfers":           ("transfers",           _team_key),
-    "leagues":             ("leagues",             _fallback_key),
-    "venues":              ("venues",              _venues_key),
+    "teams": ("teams", _league_season_key),
+    "standings": ("standings", _league_season_key),
+    "teams_statistics": ("teams_statistics", _league_season_team_key),
+    "players": ("players", _players_key),
+    "players_squads": ("players_squads", _team_key),
+    "coachs": ("coachs", _team_key),
+    "transfers": ("transfers", _team_key),
+    "leagues": ("leagues", _fallback_key),
+    "venues": ("venues", _venues_key),
 }
 
 
@@ -182,7 +182,9 @@ def main() -> int:
     ap.add_argument("--bucket", required=True, help="Target S3 bucket name")
     ap.add_argument("--region", default="eu-west-3")
     ap.add_argument(
-        "--domain", choices=["club", "national", "all"], default="all",
+        "--domain",
+        choices=["club", "national", "all"],
+        default="all",
         help="Which domain(s) to migrate",
     )
     ap.add_argument("--workers", type=int, default=16)

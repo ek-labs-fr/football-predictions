@@ -65,9 +65,7 @@ def _load_actuals() -> pd.DataFrame:
         if not io.exists(tbl):
             continue
         df = io.read_csv(tbl)
-        df = df[df["status"].isin(_FINISHED)][
-            ["fixture_id", "home_goals", "away_goals"]
-        ].copy()
+        df = df[df["status"].isin(_FINISHED)][["fixture_id", "home_goals", "away_goals"]].copy()
         frames.append(df)
     if not frames:
         return pd.DataFrame(columns=["fixture_id", "home_goals", "away_goals"])
@@ -84,7 +82,8 @@ def _score_outcomes(joined: pd.DataFrame) -> pd.DataFrame:
         joined["home_goals"].astype(str) + "-" + joined["away_goals"].astype(str)
     )
     joined["actual_outcome"] = pd.Series(
-        ["home_win"] * len(joined), index=joined.index,
+        ["home_win"] * len(joined),
+        index=joined.index,
     )
     joined.loc[joined["home_goals"] < joined["away_goals"], "actual_outcome"] = "away_win"
     joined.loc[joined["home_goals"] == joined["away_goals"], "actual_outcome"] = "draw"

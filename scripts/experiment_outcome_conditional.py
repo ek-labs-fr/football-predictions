@@ -63,10 +63,7 @@ def _print_block(label: str, summaries: dict[str, dict]) -> None:
     def row(metric: str, a: float, b: float, fmt: str = "{:.3f}") -> None:
         delta = b - a
         sign = "+" if delta >= 0 else ""
-        print(
-            f"{metric:<22} {fmt.format(a):>14} {fmt.format(b):>18} "
-            f"{sign}{fmt.format(delta):>9}"
-        )
+        print(f"{metric:<22} {fmt.format(a):>14} {fmt.format(b):>18} {sign}{fmt.format(delta):>9}")
 
     row("share 1-1", s_a["share_1_1"], s_b["share_1_1"], "{:.1%}")
     row("share low (4 cells)", s_a["share_low"], s_b["share_low"], "{:.1%}")
@@ -141,8 +138,8 @@ def _draw_analysis(df: pd.DataFrame) -> None:
     _, _, _, rho, _ = _load_artefacts("artefacts/club")
     print(f"\nClub model rho = {rho:+.4f}")
 
-    joint_diag = Counter()      # joint-argmax-on-diagonal-cell
-    diag_argmax = Counter()     # diagonal-argmax cell (per fixture)
+    joint_diag = Counter()  # joint-argmax-on-diagonal-cell
+    diag_argmax = Counter()  # diagonal-argmax cell (per fixture)
     p_draw_max = 0.0
     p_draw_at_argmax_count = 0
     for _, row in df.iterrows():

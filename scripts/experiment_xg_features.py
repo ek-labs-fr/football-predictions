@@ -103,20 +103,24 @@ def compute_xg_rolling(fixtures: pd.DataFrame, xg_df: pd.DataFrame) -> pd.DataFr
     fx["date"] = pd.to_datetime(fx["date"], utc=True, errors="coerce")
 
     # Reshape: one row per (team, match)
-    home = pd.DataFrame({
-        "fixture_id": fx["fixture_id"],
-        "date": fx["date"],
-        "team_id": fx["home_team_id"],
-        "xg_for": fx["home_xg"],
-        "xg_against": fx["away_xg"],
-    })
-    away = pd.DataFrame({
-        "fixture_id": fx["fixture_id"],
-        "date": fx["date"],
-        "team_id": fx["away_team_id"],
-        "xg_for": fx["away_xg"],
-        "xg_against": fx["home_xg"],
-    })
+    home = pd.DataFrame(
+        {
+            "fixture_id": fx["fixture_id"],
+            "date": fx["date"],
+            "team_id": fx["home_team_id"],
+            "xg_for": fx["home_xg"],
+            "xg_against": fx["away_xg"],
+        }
+    )
+    away = pd.DataFrame(
+        {
+            "fixture_id": fx["fixture_id"],
+            "date": fx["date"],
+            "team_id": fx["away_team_id"],
+            "xg_for": fx["away_xg"],
+            "xg_against": fx["home_xg"],
+        }
+    )
     history = pd.concat([home, away], ignore_index=True)
     history = history.sort_values(["team_id", "date"]).reset_index(drop=True)
 
@@ -136,22 +140,28 @@ def compute_xg_rolling(fixtures: pd.DataFrame, xg_df: pd.DataFrame) -> pd.DataFr
 def augment_training_table(rolling_xg: pd.DataFrame) -> pd.DataFrame:
     df = pd.read_csv(TRAINING_BASELINE)
 
-    home_xg = rolling_xg.rename(columns={
-        "team_id": "home_team_id",
-        "xg_for_avg_l10": "home_xg_for_avg_l10",
-        "xg_against_avg_l10": "home_xg_against_avg_l10",
-    })
-    away_xg = rolling_xg.rename(columns={
-        "team_id": "away_team_id",
-        "xg_for_avg_l10": "away_xg_for_avg_l10",
-        "xg_against_avg_l10": "away_xg_against_avg_l10",
-    })
+    home_xg = rolling_xg.rename(
+        columns={
+            "team_id": "home_team_id",
+            "xg_for_avg_l10": "home_xg_for_avg_l10",
+            "xg_against_avg_l10": "home_xg_against_avg_l10",
+        }
+    )
+    away_xg = rolling_xg.rename(
+        columns={
+            "team_id": "away_team_id",
+            "xg_for_avg_l10": "away_xg_for_avg_l10",
+            "xg_against_avg_l10": "away_xg_against_avg_l10",
+        }
+    )
     df = df.merge(home_xg, on=["fixture_id", "home_team_id"], how="left")
     df = df.merge(away_xg, on=["fixture_id", "away_team_id"], how="left")
 
     new_cols = [
-        "home_xg_for_avg_l10", "home_xg_against_avg_l10",
-        "away_xg_for_avg_l10", "away_xg_against_avg_l10",
+        "home_xg_for_avg_l10",
+        "home_xg_against_avg_l10",
+        "away_xg_for_avg_l10",
+        "away_xg_against_avg_l10",
     ]
     pop = df[new_cols].notna().mean()
     logger.info("Training-table xG feature populated rate:\n%s", pop.to_string())
@@ -184,11 +194,7 @@ def evaluate(label: str, model_name: str, table_path: str) -> dict:
         pd_ = float(np.trace(mat))
         pa = float(np.triu(mat, 1).sum())
         marg = int(np.argmax([ph, pd_, pa]))
-        actual_o = (
-            0 if actual_h[i] > actual_a[i]
-            else 1 if actual_h[i] == actual_a[i]
-            else 2
-        )
+        actual_o = 0 if actual_h[i] > actual_a[i] else 1 if actual_h[i] == actual_a[i] else 2
         correct_outcome.append(int(marg == actual_o))
 
     return {
@@ -240,9 +246,18 @@ def main() -> None:
         a = next(r for r in rows if r["model"] == model_name and r["label"] == "baseline")
         b = next(r for r in rows if r["model"] == model_name and r["label"] == "with_xg")
         print(f"\n{model_name}:")
-        for key in ("n_features", "lh_std", "la_std", "lh_p90", "la_p90",
-                    "high_total_share", "exact_score_acc", "outcome_acc",
-                    "mae_h", "mae_a"):
+        for key in (
+            "n_features",
+            "lh_std",
+            "la_std",
+            "lh_p90",
+            "la_p90",
+            "high_total_share",
+            "exact_score_acc",
+            "outcome_acc",
+            "mae_h",
+            "mae_a",
+        ):
             delta = b[key] - a[key]
             sign = "+" if delta >= 0 else ""
             print(f"  {key:<20} baseline={a[key]:>8}   with_xg={b[key]:>8}   delta={sign}{delta}")

@@ -50,12 +50,14 @@ def _emit_metric(
     try:
         _cw_client.put_metric_data(
             Namespace=_INGEST_NAMESPACE,
-            MetricData=[{
-                "MetricName": name,
-                "Value": float(value),
-                "Unit": unit,
-                "Dimensions": dimensions or [],
-            }],
+            MetricData=[
+                {
+                    "MetricName": name,
+                    "Value": float(value),
+                    "Unit": unit,
+                    "Dimensions": dimensions or [],
+                }
+            ],
         )
     except Exception as exc:  # noqa: BLE001 — metrics must never break ingest
         logger.warning("Failed to emit metric %s: %s", name, exc)
