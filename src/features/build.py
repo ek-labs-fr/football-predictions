@@ -388,6 +388,7 @@ def _assemble_club_table(
     rolling_path: str | Path,
     squad_path: str | Path,
     h2h_path: str | Path,
+    xg_rolling_path: str | Path | None = None,
 ) -> pd.DataFrame:
     """Return the club fixtures table joined with every feature source (no filter)."""
     df = io.read_csv(fixtures_path)
@@ -422,6 +423,26 @@ def _assemble_club_table(
         ).drop(columns=["team_id"], errors="ignore")
     else:
         logger.warning("Club rolling features not found at %s", rolling_path)
+
+    if xg_rolling_path is not None and io.exists(xg_rolling_path):
+        xg_rolling = io.read_csv(xg_rolling_path)
+        xg_rename_keys = [c for c in xg_rolling.columns if c not in ("fixture_id", "team_id")]
+        home_xg = xg_rolling.rename(columns={c: f"home_{c}" for c in xg_rename_keys})
+        away_xg = xg_rolling.rename(columns={c: f"away_{c}" for c in xg_rename_keys})
+        df = df.merge(
+            home_xg,
+            left_on=["fixture_id", "home_team_id"],
+            right_on=["fixture_id", "team_id"],
+            how="left",
+        ).drop(columns=["team_id"], errors="ignore")
+        df = df.merge(
+            away_xg,
+            left_on=["fixture_id", "away_team_id"],
+            right_on=["fixture_id", "team_id"],
+            how="left",
+        ).drop(columns=["team_id"], errors="ignore")
+    elif xg_rolling_path is not None:
+        logger.warning("Club xG rolling features not found at %s", xg_rolling_path)
 
     if io.exists(squad_path):
         squad = io.read_csv(squad_path)
@@ -472,6 +493,7 @@ def build_club_training_table(
     rolling_path: str | Path = PROCESSED_DIR / "features_rolling_club.csv",
     squad_path: str | Path = PROCESSED_DIR / "features_squad_club.csv",
     h2h_path: str | Path = PROCESSED_DIR / "features_h2h_club.csv",
+    xg_rolling_path: str | Path | None = PROCESSED_DIR / "features_xg_rolling_club.csv",
     output_path: str | Path = PROCESSED_DIR / "training_table_club.csv",
 ) -> pd.DataFrame:
     """Completed club fixtures joined with features + labels.
@@ -479,7 +501,9 @@ def build_club_training_table(
     Club pipeline differs from national: no FIFA rankings, no Elo, no tournament
     stage features, and home advantage is real (not a neutral venue).
     """
-    df = _assemble_club_table(fixtures_path, rolling_path, squad_path, h2h_path)
+    df = _assemble_club_table(
+        fixtures_path, rolling_path, squad_path, h2h_path, xg_rolling_path,
+    )
     df = df.dropna(subset=["home_goals", "away_goals", "outcome"])
 
     io.write_csv(output_path, df)
@@ -495,10 +519,13 @@ def build_club_inference_table(
     rolling_path: str | Path = PROCESSED_DIR / "features_rolling_club.csv",
     squad_path: str | Path = PROCESSED_DIR / "features_squad_club.csv",
     h2h_path: str | Path = PROCESSED_DIR / "features_h2h_club.csv",
+    xg_rolling_path: str | Path | None = PROCESSED_DIR / "features_xg_rolling_club.csv",
     output_path: str | Path = PROCESSED_DIR / "inference_table_club.csv",
 ) -> pd.DataFrame:
     """Upcoming club fixtures with features joined — the serving set."""
-    df = _assemble_club_table(fixtures_path, rolling_path, squad_path, h2h_path)
+    df = _assemble_club_table(
+        fixtures_path, rolling_path, squad_path, h2h_path, xg_rolling_path,
+    )
     df = _filter_upcoming(df)
 
     io.write_csv(output_path, df)

@@ -37,6 +37,7 @@ import logging
 import time
 from typing import Any
 
+from src.data.ingest import build_club_match_statistics_from_cache
 from src.features import io
 from src.features.build import (
     build_club_inference_table,
@@ -49,6 +50,7 @@ from src.features.rebuild import rebuild_fixtures_csv
 from src.features.rolling import compute_rolling_features
 from src.features.squad import compute_squad_features
 from src.features.tournament import compute_tournament_features
+from src.features.xg_rolling import compute_xg_rolling_features
 
 logging.basicConfig(
     level=logging.INFO,
@@ -136,6 +138,15 @@ def _run_club() -> dict[str, int]:
     )
     counts["h2h_club"] = len(h2h)
     _also_parquet("data/processed/features_h2h_club.csv")
+
+    logger.info("=== Club: match statistics (xG) from cache ===")
+    match_stats = build_club_match_statistics_from_cache()
+    counts["match_statistics_club"] = len(match_stats)
+
+    logger.info("=== Club: xG rolling features ===")
+    xg_rolling = compute_xg_rolling_features()
+    counts["xg_rolling_club"] = len(xg_rolling)
+    _also_parquet("data/processed/features_xg_rolling_club.csv")
 
     logger.info("=== Club: training table ===")
     table = build_club_training_table()
