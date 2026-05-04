@@ -27,7 +27,7 @@ const DEFAULT_LEAGUE = 'premier-league';
           <img src="logo.png" alt="Eric FC" class="logo" />
           <div class="wordmark">
             <span class="ericfc">ERIC FC</span>
-            <span class="tag">FOOTBALL PREDICTIONS</span>
+            <span class="tag">AI FOOTBALL PREDICTIONS</span>
           </div>
         </div>
         @if (competitions().length > 0) {
