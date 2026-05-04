@@ -56,6 +56,11 @@ _PREDICTIONS_PREFIX = "predictions"
 # rules (e.g. argmax_v0 → some_future_rule_v1).
 _DECISION_RULE_VERSION = "argmax_v0"
 
+# Supported decision rules. argmax_v0 picks the joint-argmax cell of the
+# bivariate Poisson matrix. outcome_conditional_v0 picks the marginal-argmax
+# outcome (W/D/L) first, then the modal cell inside that outcome's region.
+_DECISION_RULES = ("argmax_v0", "outcome_conditional_v0")
+
 
 # ------------------------------------------------------------------
 # Mode + competition registry
@@ -135,6 +140,33 @@ def _load_artefacts(
 _OUTCOMES = ("home_win", "draw", "away_win")
 
 
+def _modal_scoreline(
+    mat: np.ndarray, p_h: float, p_d: float, p_a: float, rule: str,
+) -> tuple[int, int]:
+    """Pick a scoreline from the bivariate Poisson matrix under the named rule.
+
+    argmax_v0: argmax over the full joint distribution.
+    outcome_conditional_v0: argmax over only the cells consistent with the
+    marginal-argmax outcome (lower triangle for home win, diagonal for draw,
+    upper triangle for away win). Guarantees served scoreline agrees with
+    served outcome.
+    """
+    if rule == "argmax_v0":
+        target = mat
+    elif rule == "outcome_conditional_v0":
+        outcome_idx = int(np.argmax([p_h, p_d, p_a]))
+        if outcome_idx == 0:        # home win → strictly lower triangle
+            target = np.tril(mat, -1)
+        elif outcome_idx == 1:      # draw → diagonal only
+            target = np.diag(np.diag(mat))
+        else:                        # away win → strictly upper triangle
+            target = np.triu(mat, 1)
+    else:
+        raise ValueError(f"unknown decision rule: {rule!r}")
+    idx = np.unravel_index(target.argmax(), target.shape)
+    return int(idx[0]), int(idx[1])
+
+
 def _predict_rows(
     rows: pd.DataFrame,
     feature_cols: list[str],
@@ -143,7 +175,10 @@ def _predict_rows(
     model_away: object,
     scaler: object | None,
     rho: float,
+    decision_rule: str = _DECISION_RULE_VERSION,
 ) -> pd.DataFrame:
+    if decision_rule not in _DECISION_RULES:
+        raise ValueError(f"decision_rule must be one of {_DECISION_RULES}")
     missing = [c for c in feature_cols if c not in rows.columns]
     if missing:
         raise KeyError(f"missing feature columns: {missing[:5]}...")
@@ -160,11 +195,14 @@ def _predict_rows(
     p_a: list[float] = []
     for h, a in zip(lh, la, strict=True):
         mat = _bivariate_poisson_matrix(h, a, rho)
-        idx = np.unravel_index(mat.argmax(), mat.shape)
-        scores.append(f"{int(idx[0])}-{int(idx[1])}")
-        p_h.append(float(np.tril(mat, -1).sum()))
-        p_d.append(float(np.trace(mat)))
-        p_a.append(float(np.triu(mat, 1).sum()))
+        ph = float(np.tril(mat, -1).sum())
+        pd_ = float(np.trace(mat))
+        pa = float(np.triu(mat, 1).sum())
+        sh, sa = _modal_scoreline(mat, ph, pd_, pa, decision_rule)
+        scores.append(f"{sh}-{sa}")
+        p_h.append(ph)
+        p_d.append(pd_)
+        p_a.append(pa)
 
     out = rows.copy()
     out["lambda_home"] = np.round(lh, 3)
@@ -358,7 +396,7 @@ def predict_recent(mode: str, days: int = _RECENT_WINDOW_DAYS) -> pd.DataFrame:
     return out
 
 
-def predict_holdout(mode: str) -> pd.DataFrame:
+def predict_holdout(mode: str, decision_rule: str = _DECISION_RULE_VERSION) -> pd.DataFrame:
     cfg = MODES[mode]
     train_df = _ensure_train_df_dates(io.read_csv(cfg.training_table))
     feature_cols = get_feature_columns(train_df, mode=mode)
@@ -368,7 +406,10 @@ def predict_holdout(mode: str) -> pd.DataFrame:
     holdout = train_df[test_mask].copy()
 
     model_home, model_away, scaler, rho, _trained_at = _load_artefacts(cfg.artefacts_prefix)
-    out = _predict_rows(holdout, feature_cols, medians, model_home, model_away, scaler, rho)
+    out = _predict_rows(
+        holdout, feature_cols, medians, model_home, model_away, scaler, rho,
+        decision_rule=decision_rule,
+    )
 
     out["actual_home_goals"] = out["home_goals"].astype(int)
     out["actual_away_goals"] = out["away_goals"].astype(int)
