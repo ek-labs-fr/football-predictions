@@ -29,7 +29,6 @@ import { TeamCrestComponent } from './team-crest.component';
         </div>
       </header>
 
-      <p class="cap">MATCH RESULT</p>
       <div class="pills" role="group" aria-label="Predicted match result">
         <span class="pill" [class.on]="scoreOutcome() === 'home_win'">HOME</span>
         <span class="pill" [class.on]="scoreOutcome() === 'draw'">DRAW</span>
@@ -121,13 +120,6 @@ import { TeamCrestComponent } from './team-crest.component';
     .score-sep {
       font-weight: 700;
       color: rgba(255, 255, 255, 0.6);
-    }
-    .cap {
-      margin: 4px 0 0;
-      font-size: 0.65rem;
-      letter-spacing: 0.18em;
-      text-align: center;
-      color: rgba(255, 255, 255, 0.7);
     }
     .pills {
       display: grid;

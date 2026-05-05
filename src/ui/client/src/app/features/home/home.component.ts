@@ -48,7 +48,7 @@ const DEFAULT_LEAGUE = 'premier-league';
         <p class="error">{{ errorMsg() }}</p>
       } @else if (selectedCompetition(); as comp) {
         <section class="block">
-          <h2 class="section-title">UPCOMING FIXTURES</h2>
+          <h2 class="section-title">UPCOMING PREDICTIONS</h2>
           @if (loadingUpcoming()) {
             <div class="grid">
               @for (_ of [0,1,2,3,4,5]; track $index) {
