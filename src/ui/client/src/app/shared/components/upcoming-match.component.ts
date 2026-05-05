@@ -35,6 +35,10 @@ import { TeamCrestComponent } from './team-crest.component';
         <span class="pill" [class.on]="scoreOutcome() === 'draw'">DRAW</span>
         <span class="pill" [class.on]="scoreOutcome() === 'away_win'">AWAY</span>
       </div>
+
+      @if (match.rationale) {
+        <footer class="foot">{{ match.rationale }}</footer>
+      }
     </article>
   `,
   styles: `
@@ -150,6 +154,17 @@ import { TeamCrestComponent } from './team-crest.component';
       background: var(--ericfc-gold);
       color: var(--ericfc-navy);
       box-shadow: 0 2px 6px rgba(194, 155, 81, 0.3);
+    }
+    .foot {
+      margin: 4px -14px -12px;
+      padding: 8px 14px;
+      text-align: center;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.92);
+      border-top: 1px solid rgba(194, 155, 81, 0.4);
+      background: rgba(0, 0, 0, 0.12);
     }
   `,
 })

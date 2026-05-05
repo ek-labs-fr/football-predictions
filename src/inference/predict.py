@@ -41,6 +41,7 @@ import numpy as np
 import pandas as pd
 
 from src.features import io
+from src.inference.rationale import render_rationale
 from src.models.calibrate import _bivariate_poisson_matrix
 from src.models.train import _make_holdout_masks, get_feature_columns
 
@@ -279,6 +280,55 @@ def _coerce_scalar(value: object) -> object:
     return value
 
 
+def _compute_rationales_for_rows(
+    df: pd.DataFrame,
+    feature_cols: list[str],
+    medians: pd.Series,
+    model_home: object,
+    model_away: object,
+    scaler: object | None,
+) -> list[str]:
+    """Per-row plain-English rationale based on linear-model coefficients.
+
+    Returns one string per input row. Empty string if the model is not
+    coefficient-based (e.g. a tree model) so the UI can hide the footer.
+    Computed on the fly each run; not persisted in frozen prediction JSONs.
+    """
+    coef_home = getattr(model_home, "coef_", None)
+    coef_away = getattr(model_away, "coef_", None)
+    if (
+        coef_home is None
+        or coef_away is None
+        or len(coef_home) != len(feature_cols)
+        or len(coef_away) != len(feature_cols)
+    ):
+        return [""] * len(df)
+
+    required = {"home_team_name", "away_team_name", "predicted_outcome"}
+    if not required.issubset(df.columns):
+        return [""] * len(df)
+
+    x_raw = df[feature_cols].fillna(medians)
+    x_input = scaler.transform(x_raw) if scaler is not None else x_raw.values
+    raw_arr = x_raw.to_numpy()
+
+    rationales: list[str] = []
+    for i in range(len(df)):
+        rationales.append(
+            render_rationale(
+                home_team=str(df["home_team_name"].iloc[i]),
+                away_team=str(df["away_team_name"].iloc[i]),
+                predicted_outcome=str(df["predicted_outcome"].iloc[i]),
+                feature_cols=feature_cols,
+                scaled_x=x_input[i],
+                raw_x=raw_arr[i],
+                coef_home=np.asarray(coef_home),
+                coef_away=np.asarray(coef_away),
+            )
+        )
+    return rationales
+
+
 def _materialise_predictions(
     rows: pd.DataFrame,
     feature_cols: list[str],
@@ -324,9 +374,20 @@ def _materialise_predictions(
 
     payloads = [_load_prediction(int(fid)) for fid in fids]
     pred_df = pd.DataFrame(payloads)
-    return rows.reset_index(drop=True).join(
+    out = rows.reset_index(drop=True).join(
         pred_df.drop(columns=["fixture_id"]).reset_index(drop=True),
     )
+    # Recompute rationale fresh each run — not persisted in the frozen store,
+    # so retraining the model automatically refreshes the served text.
+    out["rationale"] = _compute_rationales_for_rows(
+        out,
+        feature_cols,
+        medians,
+        model_home,
+        model_away,
+        scaler,
+    )
+    return out
 
 
 # ------------------------------------------------------------------
@@ -458,6 +519,14 @@ def predict_holdout(mode: str, decision_rule: str = _DECISION_RULE_VERSION) -> p
         rho,
         decision_rule=decision_rule,
     )
+    out["rationale"] = _compute_rationales_for_rows(
+        out,
+        feature_cols,
+        medians,
+        model_home,
+        model_away,
+        scaler,
+    )
 
     out["actual_home_goals"] = out["home_goals"].astype(int)
     out["actual_away_goals"] = out["away_goals"].astype(int)
@@ -502,6 +571,7 @@ _UPCOMING_COLS = [
     "p_draw",
     "p_away_win",
     "predicted_outcome",
+    "rationale",
     "prediction_made_at",
 ]
 
