@@ -45,6 +45,7 @@ import { TeamCrestComponent } from './team-crest.component';
       background: var(--ericfc-navy);
       color: #fff;
       border-radius: 16px;
+      overflow: hidden;
       padding: 14px 14px 12px;
       box-shadow: 0 6px 18px rgba(27, 51, 88, 0.18);
       display: flex;
