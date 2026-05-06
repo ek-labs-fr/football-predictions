@@ -31,9 +31,9 @@ import { ChangeDetectionStrategy, Component, HostListener, signal } from '@angul
           <button type="button" class="close" aria-label="Close" (click)="close()">×</button>
         </header>
         <p>
-          ERIC FC is an AI-powered football prediction site. It uses Poisson regression models
-          trained on historical fixture data to forecast scorelines, outcomes, and tournament
-          probabilities for the FIFA World Cup 2026 and major European leagues.
+          ERIC FC is an AI-powered football prediction site. It uses machine learning models
+          trained on historical fixture data to forecast scorelines for the FIFA World Cup 2026
+          and major European leagues.
         </p>
         <h3>Reference docs</h3>
         <ul class="docs">
